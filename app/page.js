@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '../lib/useSession';
-import { tienePermisoEditarEstructura } from '../lib/permisos';
+import { tienePermisoEditarEstructura, tienePermisoReordenarGrupos } from '../lib/permisos';
 import { colorSiguiente } from '../lib/paletaTablero';
 import GrupoTabla from '../components/tablero/GrupoTabla';
 import PanelDetalle from '../components/tablero/PanelDetalle';
@@ -44,10 +44,13 @@ export default function TableroPage() {
   const [actividadGlobal, setActividadGlobal] = useState([]);
   const [cargandoActividadGlobal, setCargandoActividadGlobal] = useState(false);
   const [mostrarActividadGlobal, setMostrarActividadGlobal] = useState(false);
+  const [actividadVistaCount, setActividadVistaCount] = useState(0);
 
   const [cargandoEjemplo, setCargandoEjemplo] = useState(false);
 
   const puedeEditarEstructura = tienePermisoEditarEstructura(usuario);
+  const puedeReordenarGrupos = tienePermisoReordenarGrupos(usuario);
+  const [grupoArrastradoId, setGrupoArrastradoId] = useState(null);
 
   useEffect(() => {
     if (!cargando && !usuario) router.push('/login');
@@ -258,6 +261,28 @@ export default function TableroPage() {
     } catch {
       setError('No se pudo guardar el grupo. Refrescá la página.');
     }
+  }
+
+  // Reordenar grupos arrastrando (Super Admin): mueve el grupo soltado a la posición del
+  // grupo destino y reacomoda el resto, persistiendo el nuevo "orden" de cada uno que cambió.
+  function soltarGrupoSobre(grupoDestinoId) {
+    const origenId = grupoArrastradoId;
+    setGrupoArrastradoId(null);
+    if (!origenId || origenId === grupoDestinoId) return;
+    const ordenActual = [...grupos].sort((a, b) => a.orden - b.orden);
+    const idxOrigen = ordenActual.findIndex((g) => g.id === origenId);
+    const idxDestino = ordenActual.findIndex((g) => g.id === grupoDestinoId);
+    if (idxOrigen === -1 || idxDestino === -1) return;
+    const [movido] = ordenActual.splice(idxOrigen, 1);
+    ordenActual.splice(idxDestino, 0, movido);
+    const cambiados = ordenActual
+      .map((g, i) => ({ id: g.id, orden: i, ordenAnterior: g.orden }))
+      .filter((g) => g.orden !== g.ordenAnterior);
+    setGrupos((prev) => prev.map((g) => {
+      const nuevo = cambiados.find((c) => c.id === g.id);
+      return nuevo ? { ...g, orden: nuevo.orden } : g;
+    }));
+    cambiados.forEach(({ id, orden }) => actualizarGrupo(id, { orden }));
   }
 
   async function eliminarGrupo(grupo) {
@@ -540,6 +565,12 @@ export default function TableroPage() {
   const itemSeleccionado = items.find((it) => it.id === itemSeleccionadoId);
   const hayFiltrosActivos = busqueda || filtroEstado || (filtroTab && filtroTab !== 'todos') || filtroResponsables.length > 0;
   const actividadHoy = actividadGlobal.filter((a) => (a.fecha || '').slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
+  // Mientras el panel de actividad está abierto, lo damos por "visto" — el número del
+  // 🔔 solo cuenta lo que pasó desde la última vez que se abrió.
+  useEffect(() => {
+    if (mostrarActividadGlobal) setActividadVistaCount(actividadHoy);
+  }, [mostrarActividadGlobal, actividadHoy]);
+  const actividadSinVer = Math.max(0, actividadHoy - actividadVistaCount);
 
   if (cargando || !usuario) return null;
 
@@ -590,9 +621,9 @@ export default function TableroPage() {
             title="Actividad del tablero" data-tour="tablero-actividad-global"
           >
             🔔
-            {actividadHoy > 0 && (
+            {actividadSinVer > 0 && (
               <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-accentMagenta text-white text-[10px] font-bold flex items-center justify-center">
-                {actividadHoy}
+                {actividadSinVer}
               </span>
             )}
           </button>
@@ -700,6 +731,11 @@ export default function TableroPage() {
               onEliminarItem={eliminarItemConfirmado}
               onAbrirEditorColumnas={() => setEditandoColumnas(true)}
               onCrearPersona={crearPersona}
+              puedeReordenarGrupos={puedeReordenarGrupos}
+              arrastrando={grupoArrastradoId === grupo.id}
+              onIniciarArrastre={() => setGrupoArrastradoId(grupo.id)}
+              onTerminarArrastre={() => setGrupoArrastradoId(null)}
+              onSoltarSobre={(e) => { e.preventDefault(); soltarGrupoSobre(grupo.id); }}
             />
           ))}
 

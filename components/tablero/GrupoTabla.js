@@ -7,7 +7,7 @@ export default function GrupoTabla({
   grupo, columnas, items, usuariosEquipo, puedeEditarEstructura,
   onRenombrarGrupo, onRecolorearGrupo, onEliminarGrupo,
   onCrearItem, onActualizarCelda, onAbrirItem, onMoverItem, onEliminarItem, onAbrirEditorColumnas,
-  onCrearPersona
+  onCrearPersona, puedeReordenarGrupos, arrastrando, onIniciarArrastre, onTerminarArrastre, onSoltarSobre
 }) {
   const [colapsado, setColapsado] = useState(false);
   const [editandoNombre, setEditandoNombre] = useState(false);
@@ -37,13 +37,30 @@ export default function GrupoTabla({
   }
 
   return (
-    <div className="mb-6 rounded-xl border border-border bg-surface overflow-hidden" data-tour="tablero-grupo">
+    <div
+      className={`mb-6 rounded-xl border bg-surface overflow-hidden transition-opacity ${arrastrando ? 'opacity-40 border-accentTeal' : 'border-border'}`}
+      data-tour="tablero-grupo"
+      onDragOver={puedeReordenarGrupos ? (e) => e.preventDefault() : undefined}
+      onDrop={puedeReordenarGrupos ? onSoltarSobre : undefined}
+    >
       <div
         className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
         style={{ borderLeft: `4px solid ${grupo.color}` }}
         onClick={() => setColapsado((v) => !v)}
         title={colapsado ? 'Mostrar contenidos' : 'Ocultar contenidos'}
       >
+        {puedeReordenarGrupos && (
+          <span
+            draggable
+            onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('text/plain', grupo.id); onIniciarArrastre?.(); }}
+            onDragEnd={(e) => { e.stopPropagation(); onTerminarArrastre?.(); }}
+            onClick={(e) => e.stopPropagation()}
+            className="text-textMuted hover:text-text text-sm cursor-grab active:cursor-grabbing px-0.5"
+            title="Arrastrar para reordenar"
+          >
+            ⠿
+          </span>
+        )}
         <span className="text-textMuted hover:text-text text-xs w-5">
           {colapsado ? '▸' : '▾'}
         </span>

@@ -19,21 +19,25 @@ function CeldaEstado({ columna, valor, onGuardar }) {
   const opcion = (columna.opciones || []).find((o) => o.id === valor);
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative h-9 flex items-center" ref={ref}>
       <button
         onClick={() => setAbierto((v) => !v)}
-        className="w-full h-9 rounded text-xs font-semibold text-white flex items-center justify-center px-2 truncate"
-        style={{ background: opcion?.color || '#c4c4c4' }}
+        className={
+          opcion
+            ? 'inline-flex items-center justify-center max-w-full h-6 px-3 rounded-full text-[11px] font-semibold text-white truncate leading-none tracking-tight hover:brightness-110 transition'
+            : 'inline-flex items-center justify-center h-6 px-3 rounded-full text-[11px] font-medium truncate leading-none tracking-tight bg-surface2 text-textMuted border border-dashed border-border hover:border-textMuted transition'
+        }
+        style={opcion ? { background: opcion.color } : undefined}
       >
         {opcion?.label || 'Sin estado'}
       </button>
       {abierto && (
-        <div className="absolute z-20 top-full left-0 mt-1 w-44 bg-surface2 border border-border rounded-lg shadow-xl p-1">
+        <div className="absolute z-20 top-full left-0 mt-1 w-44 bg-surface2 border border-border rounded-lg shadow-xl p-1.5 space-y-1">
           {(columna.opciones || []).map((o) => (
             <button
               key={o.id}
               onClick={() => { onGuardar(o.id, `cambió ${columna.nombre} a "${o.label}"`); setAbierto(false); }}
-              className="w-full text-left text-xs rounded px-2 py-1.5 mb-0.5 text-white font-medium"
+              className="w-full text-center rounded-full px-3 py-1 text-[11px] text-white font-medium leading-none tracking-tight hover:brightness-110 transition"
               style={{ background: o.color }}
             >
               {o.label}
@@ -41,7 +45,7 @@ function CeldaEstado({ columna, valor, onGuardar }) {
           ))}
           {!columna.opciones?.length && <p className="text-xs text-textMuted px-2 py-1">Sin opciones cargadas.</p>}
           {valor && (
-            <button onClick={() => { onGuardar('', `quitó ${columna.nombre}`); setAbierto(false); }} className="w-full text-left text-xs text-textMuted px-2 py-1.5 border-t border-border mt-0.5 pt-1.5">
+            <button onClick={() => { onGuardar('', `quitó ${columna.nombre}`); setAbierto(false); }} className="w-full text-left text-xs text-textMuted px-2 py-1.5 border-t border-border mt-1 pt-1.5">
               Limpiar
             </button>
           )}
