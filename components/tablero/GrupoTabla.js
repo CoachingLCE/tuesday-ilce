@@ -6,7 +6,8 @@ import { PALETA_COLORES } from '../../lib/paletaTablero';
 export default function GrupoTabla({
   grupo, columnas, items, usuariosEquipo, puedeEditarEstructura,
   onRenombrarGrupo, onRecolorearGrupo, onEliminarGrupo,
-  onCrearItem, onActualizarCelda, onAbrirItem, onMoverItem, onEliminarItem, onAbrirEditorColumnas
+  onCrearItem, onActualizarCelda, onAbrirItem, onMoverItem, onEliminarItem, onAbrirEditorColumnas,
+  onCrearPersona
 }) {
   const [colapsado, setColapsado] = useState(false);
   const [editandoNombre, setEditandoNombre] = useState(false);
@@ -95,7 +96,11 @@ export default function GrupoTabla({
                     </td>
                     {columnas.map((c) => (
                       <td key={c.id} className="px-1 py-1">
-                        <Celda columna={c} valor={item.cells?.[c.id]} usuariosEquipo={usuariosEquipo} onGuardar={(v, txt) => onActualizarCelda(item, c, v, txt)} />
+                        <Celda
+                          columna={c} valor={item.cells?.[c.id]} usuariosEquipo={usuariosEquipo}
+                          onGuardar={(v, txt) => onActualizarCelda(item, c, v, txt)}
+                          puedeCrearPersonas={puedeEditarEstructura} onCrearPersona={onCrearPersona}
+                        />
                       </td>
                     ))}
                     {puedeEditarEstructura && <td></td>}

@@ -9,15 +9,32 @@ const TIPOS = [
   { id: 'text', label: 'Texto' }
 ];
 
+// Sugiere un tipo de columna a partir de palabras clave en el nombre — el usuario
+// puede corregirlo manualmente en el desplegable, y ahí deja de auto-sugerir.
+function sugerirTipoColumna(nombre) {
+  const n = (nombre || '').toLowerCase();
+  if (/fecha|vencimiento|entrega|deadline/.test(n)) return 'date';
+  if (/estado|prioridad|etapa|status/.test(n)) return 'status';
+  if (/responsable|persona|asignad|encargad/.test(n)) return 'person';
+  return 'text';
+}
+
 export default function EditorColumnas({ columnas, onCrear, onActualizar, onEliminar, onCerrar }) {
   const [nuevoNombre, setNuevoNombre] = useState('');
+  const [nuevoTipo, setNuevoTipo] = useState('text');
+  const [tipoTocado, setTipoTocado] = useState(false);
+
+  function onCambiarNombre(valor) {
+    setNuevoNombre(valor);
+    if (!tipoTocado) setNuevoTipo(sugerirTipoColumna(valor));
+  }
 
   function crear(e) {
     e.preventDefault();
     if (!nuevoNombre.trim()) return;
     const id = `col_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    onCrear({ id, nombre: nuevoNombre.trim(), tipo: 'text', orden: columnas.length, opciones: [] });
-    setNuevoNombre('');
+    onCrear({ id, nombre: nuevoNombre.trim(), tipo: nuevoTipo, orden: columnas.length, opciones: [] });
+    setNuevoNombre(''); setNuevoTipo('text'); setTipoTocado(false);
   }
 
   return (
@@ -41,10 +58,17 @@ export default function EditorColumnas({ columnas, onCrear, onActualizar, onElim
 
         <form onSubmit={crear} className="mt-4 flex gap-2">
           <input
-            value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)}
+            value={nuevoNombre} onChange={(e) => onCambiarNombre(e.target.value)}
             placeholder="Nombre de la nueva columna"
             className="flex-1 bg-bg border border-border rounded-lg px-2.5 py-2 text-sm"
           />
+          <select
+            value={nuevoTipo} onChange={(e) => { setNuevoTipo(e.target.value); setTipoTocado(true); }}
+            className="bg-bg border border-border rounded-lg px-2 py-2 text-xs"
+            title="Tipo de columna (se sugiere solo según el nombre, pero lo podés cambiar)"
+          >
+            {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
           <button className="bg-gradient-to-r from-accentPurple to-accentMagenta text-white rounded-lg px-4 py-2 text-sm font-semibold">+ Agregar</button>
         </form>
       </div>

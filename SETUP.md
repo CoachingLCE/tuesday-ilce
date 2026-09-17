@@ -86,9 +86,9 @@ No hacen falta (todavía) `GMAIL_USER`, `GMAIL_APP_PASSWORD` ni `CRON_SECRET` �
 
 ## Simplificaciones respecto del prototipo original
 
-Dos decisiones a propósito, para que el tablero funcione de verdad con datos persistentes en Sheets (no en memoria del navegador):
+Decisiones a propósito, para que el tablero funcione de verdad con datos persistentes en Sheets (no en memoria del navegador):
 
-1. **Adjuntos = solo enlaces.** No hay carga de archivos binarios (imágenes/videos/PDFs) — se pega un link (Drive, etc.) con un nombre. Cualquier "adjunto" que se suba como archivo real en el prototipo original tampoco sobrevivía entre sesiones, así que no se pierde funcionalidad real.
-2. **"Responsable" = gente real del equipo**, la misma lista de `Usuarios`/Accesos — no se pueden crear personas sueltas al vuelo como en el prototipo. Evita duplicar/inventar usuarios que no existen en el sistema de login.
+1. **Adjuntos = enlaces, con vista previa.** No hay carga de archivos desde tu computadora — pegás un link (de Drive, etc.) con un nombre, y la app detecta sola si es imagen/video/PDF/enlace común para mostrar una miniatura y abrirlo en grande (como el prototipo), pero el archivo en sí sigue viviendo donde lo hayas subido vos (Drive, etc.), no en la app.
+2. **"Responsable" = gente real del equipo**, la misma lista de `Usuarios`/Accesos. Admin/SuperAdmin pueden crear una persona nueva sin salir del tablero (desde el mismo selector de Responsable, tocando "+ Crear persona"), pero a diferencia del prototipo se les pide el email real (porque esa persona queda cargada en Usuarios y podría loguearse después) — no se crean "personas sueltas" sin email real.
 
 También: reordenar contenidos dentro de un grupo se hace con las flechitas ↑↓ (no arrastrando), y no hay arrastre entre grupos — para mover un contenido a otro grupo se usa el selector que está arriba de todo en su ficha de detalle.

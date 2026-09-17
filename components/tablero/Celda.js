@@ -50,13 +50,36 @@ function CeldaEstado({ columna, valor, onGuardar }) {
   );
 }
 
-function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar }) {
+function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPersonas, onCrearPersona }) {
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState('');
+  const [formularioAbierto, setFormularioAbierto] = useState(false);
+  const [emailNuevo, setEmailNuevo] = useState('');
+  const [creando, setCreando] = useState(false);
+  const [errorCreando, setErrorCreando] = useState('');
   const ref = useRef(null);
   useClickOutside(ref, () => setAbierto(false));
   const persona = usuariosEquipo.find((u) => u.email === valor);
   const filtrados = usuariosEquipo.filter((u) => u.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const hayCoincidenciaExacta = usuariosEquipo.some((u) => u.nombre.toLowerCase() === busqueda.trim().toLowerCase());
+
+  async function crear(e) {
+    e.preventDefault();
+    if (!busqueda.trim() || !emailNuevo.trim() || creando) return;
+    setCreando(true);
+    setErrorCreando('');
+    try {
+      const resultado = await onCrearPersona(busqueda.trim(), emailNuevo.trim());
+      if (resultado?.email) {
+        onGuardar(resultado.email, `asignó ${columna.nombre} a ${busqueda.trim()} (persona nueva)`);
+        setAbierto(false); setBusqueda(''); setFormularioAbierto(false); setEmailNuevo('');
+      } else {
+        setErrorCreando(resultado?.error || 'No se pudo crear.');
+      }
+    } finally {
+      setCreando(false);
+    }
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -91,6 +114,32 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar }) {
             ))}
             {!filtrados.length && <p className="text-xs text-textMuted px-2 py-1.5">Nadie coincide.</p>}
           </div>
+          {puedeCrearPersonas && busqueda.trim() && !hayCoincidenciaExacta && (
+            formularioAbierto ? (
+              <form onSubmit={crear} className="mt-1 border-t border-border pt-1.5 space-y-1">
+                <p className="text-[11px] text-textMuted px-1">Crear a &quot;{busqueda.trim()}&quot; en Usuarios:</p>
+                <input
+                  autoFocus value={emailNuevo} onChange={(e) => setEmailNuevo(e.target.value)}
+                  type="email" placeholder="email@ilce.com"
+                  className="w-full bg-bg border border-border rounded px-2 py-1 text-xs"
+                />
+                {errorCreando && <p className="text-[10px] text-dangerText px-1">{errorCreando}</p>}
+                <div className="flex gap-1">
+                  <button type="submit" disabled={creando || !emailNuevo.trim()} className="flex-1 bg-accentTeal text-white rounded px-2 py-1 text-xs font-semibold disabled:opacity-50">
+                    {creando ? 'Creando…' : 'Crear'}
+                  </button>
+                  <button type="button" onClick={() => { setFormularioAbierto(false); setErrorCreando(''); }} className="text-xs text-textMuted px-2">Cancelar</button>
+                </div>
+              </form>
+            ) : (
+              <button
+                onClick={() => setFormularioAbierto(true)}
+                className="w-full text-left text-xs text-accentTeal px-2 py-1.5 mt-1 border-t border-border pt-1.5"
+              >
+                {`+ Crear persona "${busqueda.trim()}"`}
+              </button>
+            )
+          )}
           {valor && (
             <button onClick={() => { onGuardar('', `quitó ${columna.nombre}`); setAbierto(false); }} className="w-full text-left text-xs text-textMuted px-2 py-1 mt-1 border-t border-border pt-1.5">
               Quitar
@@ -146,9 +195,14 @@ function CeldaTexto({ columna, valor, onGuardar }) {
   );
 }
 
-export default function Celda({ columna, valor, usuariosEquipo, onGuardar }) {
+export default function Celda({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPersonas, onCrearPersona }) {
   if (columna.tipo === 'status') return <CeldaEstado columna={columna} valor={valor} onGuardar={onGuardar} />;
-  if (columna.tipo === 'person') return <CeldaPersona columna={columna} valor={valor} usuariosEquipo={usuariosEquipo || []} onGuardar={onGuardar} />;
+  if (columna.tipo === 'person') return (
+    <CeldaPersona
+      columna={columna} valor={valor} usuariosEquipo={usuariosEquipo || []} onGuardar={onGuardar}
+      puedeCrearPersonas={puedeCrearPersonas} onCrearPersona={onCrearPersona}
+    />
+  );
   if (columna.tipo === 'date') return <CeldaFecha columna={columna} valor={valor} onGuardar={onGuardar} />;
   return <CeldaTexto columna={columna} valor={valor} onGuardar={onGuardar} />;
 }
