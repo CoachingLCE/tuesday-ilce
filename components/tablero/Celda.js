@@ -21,7 +21,7 @@ function CeldaEstado({ columna, valor, onGuardar }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setAbierto((v) => !v)}
-        className="w-full h-8 rounded text-xs font-semibold text-white flex items-center justify-center px-2 truncate"
+        className="w-full h-9 rounded text-xs font-semibold text-white flex items-center justify-center px-2 truncate"
         style={{ background: opcion?.color || '#c4c4c4' }}
       >
         {opcion?.label || 'Sin estado'}
@@ -83,7 +83,7 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPer
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setAbierto((v) => !v)} className="w-full h-8 rounded text-xs flex items-center gap-1.5 px-2 hover:bg-surface2 truncate">
+      <button onClick={() => setAbierto((v) => !v)} className="w-full h-9 rounded text-xs flex items-center gap-1.5 px-2 hover:bg-surface2 truncate">
         {persona ? (
           <>
             <span className="w-5 h-5 rounded-full bg-accentPurple text-white flex items-center justify-center text-[10px] font-bold shrink-0">
@@ -157,7 +157,7 @@ function CeldaFecha({ columna, valor, onGuardar }) {
       type="date"
       value={valor || ''}
       onChange={(e) => onGuardar(e.target.value, e.target.value ? `cambió ${columna.nombre} a ${e.target.value}` : `quitó ${columna.nombre}`)}
-      className="w-full h-8 bg-transparent hover:bg-surface2 rounded text-xs px-2 border-none outline-none text-text"
+      className="w-full h-9 bg-transparent hover:bg-surface2 rounded text-xs px-2 border-none outline-none text-text"
     />
   );
 }
@@ -204,7 +204,7 @@ function CeldaArchivo({ columna, valor, onGuardar }) {
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setAbierto((v) => !v)} className="w-full h-8 rounded flex items-center gap-1 px-2 hover:bg-surface2 overflow-hidden">
+      <button onClick={() => setAbierto((v) => !v)} className="w-full h-9 rounded flex items-center gap-1 px-2 hover:bg-surface2 overflow-hidden">
         {archivos.slice(0, 3).map((a) => (
           <span key={a.id} className="w-5 h-5 rounded bg-bg border border-border flex items-center justify-center text-[10px] shrink-0 overflow-hidden">
             {a.kind === 'image' ? (
@@ -287,12 +287,12 @@ function CeldaTexto({ columna, valor, onGuardar }) {
           if (e.key === 'Enter') e.target.blur();
           if (e.key === 'Escape') { setTexto(valor || ''); setEditando(false); }
         }}
-        className="w-full h-8 bg-bg border border-accentTeal rounded px-2 text-xs outline-none"
+        className="w-full h-9 bg-bg border border-accentTeal rounded px-2 text-xs outline-none"
       />
     );
   }
   return (
-    <button onClick={() => setEditando(true)} className="w-full h-8 text-left px-2 rounded hover:bg-surface2 text-xs truncate">
+    <button onClick={() => setEditando(true)} className="w-full h-9 text-left px-2 rounded hover:bg-surface2 text-xs truncate">
       {valor || <span className="text-textMuted">—</span>}
     </button>
   );

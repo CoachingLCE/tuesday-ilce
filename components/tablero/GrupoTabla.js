@@ -74,28 +74,28 @@ export default function GrupoTabla({
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-t border-border">
-                  <th className="text-left text-xs text-textMuted font-medium px-3 py-1.5 min-w-[220px]">Nombre</th>
+                  <th className="text-left text-xs text-textMuted font-medium px-4 py-2.5 min-w-[240px]">Nombre</th>
                   {columnas.map((c) => (
-                    <th key={c.id} className="text-left text-xs text-textMuted font-medium px-2 py-1.5 min-w-[140px]">{c.nombre}</th>
+                    <th key={c.id} className="text-left text-xs text-textMuted font-medium px-3 py-2.5 min-w-[160px]">{c.nombre}</th>
                   ))}
                   {puedeEditarEstructura && (
-                    <th className="px-2 py-1.5 w-8">
+                    <th className="px-3 py-2.5 w-10">
                       <button onClick={onAbrirEditorColumnas} title="Agregar/editar columnas" className="text-textMuted hover:text-accentTeal" data-tour="tablero-editar-columnas">＋</button>
                     </th>
                   )}
-                  <th className="w-16"></th>
+                  <th className="w-20"></th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, i) => (
                   <tr key={item.id} className="border-t border-border hover:bg-surface2/60 group">
-                    <td className="px-3 py-1">
+                    <td className="px-4 py-2">
                       <button onClick={() => onAbrirItem(item.id)} className="text-left text-sm hover:underline truncate max-w-[280px] block" data-tour="tablero-item-nombre">
                         {item.nombre || '(sin nombre)'}
                       </button>
                     </td>
                     {columnas.map((c) => (
-                      <td key={c.id} className="px-1 py-1">
+                      <td key={c.id} className="px-2 py-2">
                         <Celda
                           columna={c} valor={item.cells?.[c.id]} usuariosEquipo={usuariosEquipo}
                           onGuardar={(v, txt) => onActualizarCelda(item, c, v, txt)}
