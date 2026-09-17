@@ -162,6 +162,109 @@ function CeldaFecha({ columna, valor, onGuardar }) {
   );
 }
 
+function detectarTipoAdjunto(url) {
+  const u = (url || '').toLowerCase().split('?')[0];
+  if (/\.(png|jpe?g|gif|webp|svg)$/.test(u)) return 'image';
+  if (/\.(mp4|webm|mov)$/.test(u)) return 'video';
+  if (/\.pdf$/.test(u)) return 'pdf';
+  return 'link';
+}
+
+function iconoAdjunto(kind) {
+  if (kind === 'video') return '🎬';
+  if (kind === 'pdf') return '📄';
+  return '🔗';
+}
+
+function CeldaArchivo({ columna, valor, onGuardar }) {
+  const [abierto, setAbierto] = useState(false);
+  const [nombre, setNombre] = useState('');
+  const [url, setUrl] = useState('');
+  const [lightbox, setLightbox] = useState(null);
+  const ref = useRef(null);
+  useClickOutside(ref, () => setAbierto(false));
+  const archivos = Array.isArray(valor) ? valor : [];
+
+  function agregar(e) {
+    e.preventDefault();
+    if (!nombre.trim() || !url.trim()) return;
+    const nuevo = { id: `f_${Date.now()}`, kind: detectarTipoAdjunto(url.trim()), name: nombre.trim(), url: url.trim() };
+    onGuardar([...archivos, nuevo], `agregó un archivo a ${columna.nombre}: ${nuevo.name}`);
+    setNombre(''); setUrl('');
+  }
+
+  function quitar(id) {
+    onGuardar(archivos.filter((a) => a.id !== id), `quitó un archivo de ${columna.nombre}`);
+  }
+
+  function abrir(a) {
+    if (a.kind === 'link') { window.open(a.url, '_blank', 'noreferrer'); return; }
+    setLightbox(a);
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setAbierto((v) => !v)} className="w-full h-8 rounded flex items-center gap-1 px-2 hover:bg-surface2 overflow-hidden">
+        {archivos.slice(0, 3).map((a) => (
+          <span key={a.id} className="w-5 h-5 rounded bg-bg border border-border flex items-center justify-center text-[10px] shrink-0 overflow-hidden">
+            {a.kind === 'image' ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
+            ) : iconoAdjunto(a.kind)}
+          </span>
+        ))}
+        {archivos.length > 3 && <span className="text-[10px] text-textMuted">+{archivos.length - 3}</span>}
+        {!archivos.length && <span className="text-textMuted text-xs">+ archivo</span>}
+      </button>
+      {abierto && (
+        <div className="absolute z-20 top-full left-0 mt-1 w-56 bg-surface2 border border-border rounded-lg shadow-xl p-2">
+          {archivos.length ? (
+            <div className="space-y-1 mb-2 max-h-40 overflow-y-auto">
+              {archivos.map((a) => (
+                <div key={a.id} className="flex items-center gap-1.5 text-xs">
+                  <button onClick={() => abrir(a)} className="flex-1 flex items-center gap-1.5 text-left truncate hover:underline">
+                    <span className="w-5 h-5 rounded bg-bg border border-border flex items-center justify-center text-[10px] shrink-0 overflow-hidden">
+                      {a.kind === 'image' ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
+                      ) : iconoAdjunto(a.kind)}
+                    </span>
+                    <span className="truncate">{a.name}</span>
+                  </button>
+                  <button onClick={() => quitar(a.id)} className="text-textMuted hover:text-dangerText shrink-0">✕</button>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-xs text-textMuted mb-2">Sin archivos todavía.</p>}
+          <form onSubmit={agregar} className="space-y-1">
+            <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" className="w-full bg-bg border border-border rounded px-2 py-1 text-xs" />
+            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" className="w-full bg-bg border border-border rounded px-2 py-1 text-xs" />
+            <button type="submit" className="w-full bg-accentTeal text-white rounded px-2 py-1 text-xs font-semibold">+ Agregar</button>
+          </form>
+        </div>
+      )}
+      {lightbox && (
+        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-6" onClick={() => setLightbox(null)}>
+          <button onClick={() => setLightbox(null)} className="absolute top-4 right-5 text-white text-2xl leading-none">✕</button>
+          <div onClick={(e) => e.stopPropagation()} className="max-w-[90vw] max-h-[85vh] flex flex-col items-center gap-2">
+            {lightbox.kind === 'image' && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={lightbox.url} alt={lightbox.name} className="max-w-[90vw] max-h-[78vh] rounded-lg object-contain" />
+            )}
+            {lightbox.kind === 'video' && (
+              <video src={lightbox.url} controls autoPlay className="max-w-[90vw] max-h-[78vh] rounded-lg" />
+            )}
+            {lightbox.kind === 'pdf' && (
+              <embed src={lightbox.url} type="application/pdf" className="w-[82vw] h-[78vh] rounded-lg bg-white" />
+            )}
+            <p className="text-white text-xs">{lightbox.name}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CeldaTexto({ columna, valor, onGuardar }) {
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState(valor || '');
@@ -204,5 +307,6 @@ export default function Celda({ columna, valor, usuariosEquipo, onGuardar, puede
     />
   );
   if (columna.tipo === 'date') return <CeldaFecha columna={columna} valor={valor} onGuardar={onGuardar} />;
+  if (columna.tipo === 'file') return <CeldaArchivo columna={columna} valor={valor} onGuardar={onGuardar} />;
   return <CeldaTexto columna={columna} valor={valor} onGuardar={onGuardar} />;
 }

@@ -6,6 +6,7 @@ const TIPOS = [
   { id: 'status', label: 'Estado' },
   { id: 'person', label: 'Persona' },
   { id: 'date', label: 'Fecha' },
+  { id: 'file', label: 'Archivos' },
   { id: 'text', label: 'Texto' }
 ];
 
@@ -16,6 +17,7 @@ function sugerirTipoColumna(nombre) {
   if (/fecha|vencimiento|entrega|deadline/.test(n)) return 'date';
   if (/estado|prioridad|etapa|status/.test(n)) return 'status';
   if (/responsable|persona|asignad|encargad/.test(n)) return 'person';
+  if (/archivo|adjunto|enlace|link|documento/.test(n)) return 'file';
   return 'text';
 }
 

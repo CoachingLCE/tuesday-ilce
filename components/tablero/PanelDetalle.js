@@ -22,21 +22,6 @@ function formatearFecha(iso) {
   } catch { return iso; }
 }
 
-function detectarTipoAdjunto(url) {
-  const u = url.toLowerCase().split('?')[0];
-  if (/\.(png|jpe?g|gif|webp|svg)$/.test(u)) return 'image';
-  if (/\.(mp4|webm|mov)$/.test(u)) return 'video';
-  if (/\.pdf$/.test(u)) return 'pdf';
-  return 'link';
-}
-
-function iconoAdjunto(kind) {
-  if (kind === 'image') return null; // se muestra la miniatura real
-  if (kind === 'video') return '🎬';
-  if (kind === 'pdf') return '📄';
-  return '🔗';
-}
-
 export default function PanelDetalle({
   item, columnas, usuariosEquipo, grupos, fetchAutenticado, usuario,
   onCerrar, onActualizarItem, onEliminarItem, puedeCrearPersonas, onCrearPersona
@@ -51,15 +36,9 @@ export default function PanelDetalle({
   const [mostrarActividad, setMostrarActividad] = useState(false);
   const [actividad, setActividad] = useState([]);
   const [cargandoActividad, setCargandoActividad] = useState(false);
-  const [nuevoAdjuntoAbierto, setNuevoAdjuntoAbierto] = useState(false);
-  const [adjNombre, setAdjNombre] = useState('');
-  const [adjUrl, setAdjUrl] = useState('');
-  const [lightbox, setLightbox] = useState(null); // { url, kind, name }
 
   const bodyRef = useRef(null);
   const textareaRef = useRef(null);
-
-  const adjuntos = Array.isArray(item.cells?.__adjuntos) ? item.cells.__adjuntos : [];
 
   useEffect(() => {
     setNombre(item.nombre || '');
@@ -121,25 +100,6 @@ export default function PanelDetalle({
   function cambiarGrupo(grupoId) {
     const g = grupos.find((x) => x.id === grupoId);
     onActualizarItem({ grupoId }, `movió el contenido al grupo "${g?.nombre || grupoId}"`);
-  }
-
-  function agregarAdjunto(e) {
-    e.preventDefault();
-    if (!adjNombre.trim() || !adjUrl.trim()) return;
-    const nuevo = { id: `adj_${Date.now()}`, kind: detectarTipoAdjunto(adjUrl.trim()), name: adjNombre.trim(), url: adjUrl.trim() };
-    const cellsNuevas = { ...item.cells, __adjuntos: [...adjuntos, nuevo] };
-    onActualizarItem({ cells: cellsNuevas }, `agregó un enlace: ${nuevo.name}`);
-    setAdjNombre(''); setAdjUrl(''); setNuevoAdjuntoAbierto(false);
-  }
-
-  function quitarAdjunto(id) {
-    const cellsNuevas = { ...item.cells, __adjuntos: adjuntos.filter((a) => a.id !== id) };
-    onActualizarItem({ cells: cellsNuevas }, 'quitó un enlace');
-  }
-
-  function abrirAdjunto(a) {
-    if (a.kind === 'link') { window.open(a.url, '_blank', 'noreferrer'); return; }
-    setLightbox(a);
   }
 
   function onChangeComentario(e) {
@@ -245,45 +205,6 @@ export default function PanelDetalle({
           </div>
 
           <div className="mb-5">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs font-semibold text-textMuted">Archivos y enlaces</p>
-              <button onClick={() => setNuevoAdjuntoAbierto((v) => !v)} className="text-xs text-accentTeal hover:underline">+ Agregar enlace</button>
-            </div>
-            {nuevoAdjuntoAbierto && (
-              <form onSubmit={agregarAdjunto} className="flex gap-1.5 mb-2">
-                <input value={adjNombre} onChange={(e) => setAdjNombre(e.target.value)} placeholder="Nombre" className="flex-1 bg-bg border border-border rounded-lg px-2 py-1.5 text-xs" />
-                <input value={adjUrl} onChange={(e) => setAdjUrl(e.target.value)} placeholder="https://…" className="flex-[2] bg-bg border border-border rounded-lg px-2 py-1.5 text-xs" />
-                <button className="bg-accentTeal text-white rounded-lg px-2.5 text-xs font-semibold">OK</button>
-              </form>
-            )}
-            {adjuntos.length ? (
-              <div className="flex flex-wrap gap-2">
-                {adjuntos.map((a) => (
-                  <div key={a.id} className="w-24">
-                    <div
-                      onClick={() => abrirAdjunto(a)}
-                      className="relative w-24 h-20 rounded-lg border border-border bg-bg flex items-center justify-center text-2xl cursor-pointer overflow-hidden hover:border-accentTeal"
-                      title={a.name}
-                    >
-                      {a.kind === 'image' ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span>{iconoAdjunto(a.kind)}</span>
-                      )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); quitarAdjunto(a.id); }}
-                        className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center hover:bg-dangerText"
-                      >✕</button>
-                    </div>
-                    <p className="text-[10px] text-textMuted truncate mt-0.5" title={a.name}>{a.name}</p>
-                  </div>
-                ))}
-              </div>
-            ) : <p className="text-xs text-textMuted">Sin archivos todavía.</p>}
-          </div>
-
-          <div className="mb-5">
             <p className="text-xs font-semibold text-textMuted mb-1.5">Comentarios</p>
             {cargandoComentarios ? (
               <p className="text-xs text-textMuted">Cargando…</p>
@@ -349,25 +270,6 @@ export default function PanelDetalle({
           </div>
         </div>
       </div>
-
-      {lightbox && (
-        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-6" onClick={() => setLightbox(null)}>
-          <button onClick={() => setLightbox(null)} className="absolute top-4 right-5 text-white text-2xl leading-none">✕</button>
-          <div onClick={(e) => e.stopPropagation()} className="max-w-[90vw] max-h-[85vh] flex flex-col items-center gap-2">
-            {lightbox.kind === 'image' && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={lightbox.url} alt={lightbox.name} className="max-w-[90vw] max-h-[78vh] rounded-lg object-contain" />
-            )}
-            {lightbox.kind === 'video' && (
-              <video src={lightbox.url} controls autoPlay className="max-w-[90vw] max-h-[78vh] rounded-lg" />
-            )}
-            {lightbox.kind === 'pdf' && (
-              <embed src={lightbox.url} type="application/pdf" className="w-[82vw] h-[78vh] rounded-lg bg-white" />
-            )}
-            <p className="text-white text-xs">{lightbox.name}</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
