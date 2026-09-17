@@ -1,18 +1,33 @@
 import { NextResponse } from 'next/server';
-import { conManejo } from '../../../../lib/apiHandler';
-import { requireUsuario } from '../../../../lib/requireUsuario';
-import { tienePermisoEditarEstructura } from '../../../../lib/permisos';
-import { crearColumna } from '../../../../lib/datosTablero';
+import { conManejo } from '../../../../../lib/apiHandler';
+import { requireUsuario } from '../../../../../lib/requireUsuario';
+import { tienePermisoEditarEstructura } from '../../../../../lib/permisos';
+import { actualizarColumnaPorId, eliminarColumnaPorId, crearColumna } from '../../../../../lib/datosTablero';
 
-// Agregar/quitar columnas es estructura del tablero: reservado a Admin/SuperAdmin.
-export const POST = conManejo(async (request) => {
+// Editar una columna (nombre, tipo, opciones de estado, orden): reservado a Admin/SuperAdmin.
+// Las 4 columnas de base (Estado/Responsable/Fecha/Tipo) existen "virtualmente" hasta que
+// alguien las edita por primera vez — ahí recién se crea la fila real en el Sheet (upsert),
+// para no arrancar el Sheet con filas de más que nadie tocó todavía.
+export const PATCH = conManejo(async (request, { params }) => {
   const usuario = await requireUsuario(request);
   if (!usuario) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   if (!tienePermisoEditarEstructura(usuario)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 });
 
+  const id = decodeURIComponent(params.id);
   const body = await request.json();
-  if (!body.id || !body.nombre) return NextResponse.json({ error: 'Faltan datos.' }, { status: 400 });
+  try {
+    await actualizarColumnaPorId(id, body);
+  } catch {
+    await crearColumna({ id, nombre: body.nombre || id, tipo: body.tipo || 'text', orden: body.orden ?? 0, opciones: body.opciones || [] });
+  }
+  return NextResponse.json({ ok: true });
+})
 
-  await crearColumna({ id: body.id, nombre: body.nombre, tipo: body.tipo || 'text', orden: body.orden ?? 0, opciones: body.opciones || [] });
+export const DELETE = conManejo(async (request, { params }) => {
+  const usuario = await requireUsuario(request);
+  if (!usuario) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (!tienePermisoEditarEstructura(usuario)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 });
+
+  await eliminarColumnaPorId(decodeURIComponent(params.id));
   return NextResponse.json({ ok: true });
 })
