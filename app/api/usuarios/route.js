@@ -13,8 +13,6 @@ export const GET = conManejo(async (request) => {
 
   const [usuarios, historial] = await Promise.all([listarUsuarios(), leerHistorialCompleto()]);
 
-  // El último login de cada email es la entrada "Inició sesión" más reciente en el Historial
-  // (leerHistorialCompleto ya viene ordenado de más reciente a más viejo).
   const conUltimoLogin = usuarios.map((u) => {
     const ultimo = historial.find((h) => h.accion === 'Inició sesión' && h.email?.toLowerCase() === u.email?.toLowerCase());
     const totalLogins = historial.filter((h) => h.accion === 'Inició sesión' && h.email?.toLowerCase() === u.email?.toLowerCase()).length;
@@ -30,3 +28,28 @@ export const POST = conManejo(async (request) => {
   if (!tienePermisoAccesos(actor)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 });
 
   const body = await request.json();
+  const { email, nombre, roles, password } = body;
+
+  if (!email || !nombre || !rolesValidos(roles)) {
+    return NextResponse.json({ error: 'Faltan datos o los roles no son válidos.' }, { status: 400 });
+  }
+  if (password && password.length < 8) {
+    return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres.' }, { status: 400 });
+  }
+  if (!puedeAsignarRoles(actor, roles, tienePermisoGestionarAdmins)) {
+    return NextResponse.json(
+      { error: 'Solo un Super Admin puede crear usuarios con rol Admin o SuperAdmin.' },
+      { status: 403 }
+    );
+  }
+
+  const existente = await buscarUsuarioPorEmail(email);
+  if (existente) {
+    return NextResponse.json({ error: 'Ese email ya existe en Usuarios.' }, { status: 409 });
+  }
+
+  await crearUsuario({ email, nombre, roles, password });
+  await registrarAccion(actor.email, actor.nombre, 'Creó usuario', `${email} (${roles.join(', ')})${password ? ' — con contraseña asignada' : ''}`);
+
+  return NextResponse.json({ ok: true });
+})
