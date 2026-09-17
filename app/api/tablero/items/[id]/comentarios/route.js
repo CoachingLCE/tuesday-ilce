@@ -3,6 +3,7 @@ import { conManejo } from '../../../../../../lib/apiHandler';
 import { requireUsuario } from '../../../../../../lib/requireUsuario';
 import { tienePermisoVer } from '../../../../../../lib/permisos';
 import { leerComentarios, crearComentario, crearActividad } from '../../../../../../lib/datosTablero';
+import { registrarAccion } from '../../../../../../lib/auditoria';
 
 export const GET = conManejo(async (request, { params }) => {
   const usuario = await requireUsuario(request);
@@ -25,6 +26,8 @@ export const POST = conManejo(async (request, { params }) => {
   const comentarioId = `${id}-c${Date.now()}`;
   await crearComentario({ id: comentarioId, itemId: id, autor: usuario.nombre, html: body.html });
   await crearActividad({ id: `${id}-a${Date.now()}`, itemId: id, autor: usuario.nombre, texto: 'publicó un comentario' });
+  const textoPlano = body.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140);
+  await registrarAccion(usuario.email, usuario.nombre, 'Comentó un contenido del tablero', textoPlano);
 
   return NextResponse.json({ ok: true, id: comentarioId });
 })
