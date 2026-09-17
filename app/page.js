@@ -31,7 +31,8 @@ export default function TableroPage() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroTab, setFiltroTab] = useState('todos'); // id de pestaña ('todos' | 'revisar' | 'reels' | 'post' | colId:optId) | null
-  const [filtroResponsable, setFiltroResponsable] = useState('');
+  const [filtroResponsables, setFiltroResponsables] = useState([]); // array de emails, o '__sin__' para "sin responsable"
+  const [busquedaResponsable, setBusquedaResponsable] = useState('');
 
   const [itemSeleccionadoId, setItemSeleccionadoId] = useState(null);
   const [editandoColumnas, setEditandoColumnas] = useState(false);
@@ -437,6 +438,14 @@ export default function TableroPage() {
   const columnaTipo = useMemo(() => columnas.find((c) => c.tipo === 'status' && c.id !== columnaEstado?.id && (c.nombre || '').trim().toLowerCase() === 'tipo'), [columnas, columnaEstado]);
   const columnaResponsable = useMemo(() => columnas.find((c) => c.tipo === 'person'), [columnas]);
 
+  // Un contenido puede tener uno o varios responsables (array de emails); sigue aceptando
+  // el formato viejo (un email suelto) para no romper contenidos ya cargados.
+  function responsablesDeItem(it) {
+    if (!columnaResponsable) return [];
+    const v = it.cells?.[columnaResponsable.id];
+    return Array.isArray(v) ? v : (v ? [v] : []);
+  }
+
   function idDeOpcion(columna, patron) {
     const op = (columna?.opciones || []).find((o) => patron.test((o.label || '').toLowerCase()) || patron.test((o.id || '').toLowerCase()));
     return op?.id;
@@ -460,9 +469,13 @@ export default function TableroPage() {
   // Pool base: solo búsqueda + responsable — sirve para calcular los contadores de chips/pestañas.
   const poolBase = useMemo(() => items.filter((it) => {
     if (busqueda && !(it.nombre || '').toLowerCase().includes(busqueda.toLowerCase())) return false;
-    if (filtroResponsable && columnaResponsable && it.cells?.[columnaResponsable.id] !== filtroResponsable) return false;
+    if (filtroResponsables.length && columnaResponsable) {
+      const asignados = responsablesDeItem(it);
+      const coincide = filtroResponsables.some((f) => (f === '__sin__' ? asignados.length === 0 : asignados.includes(f)));
+      if (!coincide) return false;
+    }
     return true;
-  }), [items, busqueda, filtroResponsable, columnaResponsable]);
+  }), [items, busqueda, filtroResponsables, columnaResponsable]);
 
   const poolTrasChip = useMemo(() => poolBase.filter((it) => {
     if (filtroEstado && columnaEstado && it.cells?.[columnaEstado.id] !== filtroEstado) return false;
@@ -475,6 +488,46 @@ export default function TableroPage() {
     return tab ? tab.test(it) : true;
   }), [poolTrasChip, filtroTab, pestanas]);
 
+  // Pools sin el filtro de responsable (pero con búsqueda/estado/pestaña) — para que el
+  // contador de cada chip de responsable refleje "si eligiera este, combinado con lo demás".
+  const poolBaseSinResponsable = useMemo(() => items.filter((it) => {
+    if (busqueda && !(it.nombre || '').toLowerCase().includes(busqueda.toLowerCase())) return false;
+    return true;
+  }), [items, busqueda]);
+
+  const poolTrasChipSinResponsable = useMemo(() => poolBaseSinResponsable.filter((it) => {
+    if (filtroEstado && columnaEstado && it.cells?.[columnaEstado.id] !== filtroEstado) return false;
+    return true;
+  }), [poolBaseSinResponsable, filtroEstado, columnaEstado]);
+
+  const poolParaContarResponsables = useMemo(() => poolTrasChipSinResponsable.filter((it) => {
+    if (!pestanas || !filtroTab || filtroTab === 'todos') return true;
+    const tab = pestanas.find((t) => t.id === filtroTab);
+    return tab ? tab.test(it) : true;
+  }), [poolTrasChipSinResponsable, filtroTab, pestanas]);
+
+  const opcionesResponsable = useMemo(() => {
+    if (!columnaResponsable) return [];
+    const sinResponsable = poolParaContarResponsables.filter((it) => responsablesDeItem(it).length === 0).length;
+    const personas = usuariosEquipo
+      .map((u) => ({ ...u, cantidad: poolParaContarResponsables.filter((it) => responsablesDeItem(it).includes(u.email)).length }))
+      .filter((u) => u.cantidad > 0 || filtroResponsables.includes(u.email));
+    const resultado = [...personas];
+    if (sinResponsable > 0 || filtroResponsables.includes('__sin__')) {
+      resultado.push({ email: '__sin__', nombre: 'Sin responsable', cantidad: sinResponsable });
+    }
+    return resultado;
+  }, [columnaResponsable, poolParaContarResponsables, usuariosEquipo, filtroResponsables]);
+
+  const opcionesResponsableVisibles = useMemo(() => {
+    if (!busquedaResponsable.trim()) return opcionesResponsable;
+    return opcionesResponsable.filter((o) => o.nombre.toLowerCase().includes(busquedaResponsable.toLowerCase()));
+  }, [opcionesResponsable, busquedaResponsable]);
+
+  function alternarFiltroResponsable(email) {
+    setFiltroResponsables((prev) => (prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email]));
+  }
+
   // Desglose por estado para la barra de estadísticas — sobre el resultado final visible.
   const desgloseEstado = useMemo(() => {
     if (!columnaEstado) return [];
@@ -485,7 +538,7 @@ export default function TableroPage() {
 
   const gruposOrdenados = useMemo(() => [...grupos].sort((a, b) => a.orden - b.orden), [grupos]);
   const itemSeleccionado = items.find((it) => it.id === itemSeleccionadoId);
-  const hayFiltrosActivos = busqueda || filtroEstado || (filtroTab && filtroTab !== 'todos') || filtroResponsable;
+  const hayFiltrosActivos = busqueda || filtroEstado || (filtroTab && filtroTab !== 'todos') || filtroResponsables.length > 0;
   const actividadHoy = actividadGlobal.filter((a) => (a.fecha || '').slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
 
   if (cargando || !usuario) return null;
@@ -507,17 +560,8 @@ export default function TableroPage() {
           className="bg-surface2 border border-border rounded-lg px-3 py-1.5 text-sm w-56"
           data-tour="tablero-buscar"
         />
-        {columnaResponsable && (
-          <select
-            value={filtroResponsable} onChange={(e) => setFiltroResponsable(e.target.value)}
-            className="bg-surface2 border border-border rounded-lg px-2.5 py-1.5 text-sm"
-          >
-            <option value="">Todos los responsables</option>
-            {usuariosEquipo.map((u) => <option key={u.email} value={u.email}>{u.nombre}</option>)}
-          </select>
-        )}
         {hayFiltrosActivos && (
-          <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroTab('todos'); setFiltroResponsable(''); }} className="text-xs text-textMuted hover:text-text underline">
+          <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroTab('todos'); setFiltroResponsables([]); setBusquedaResponsable(''); }} className="text-xs text-textMuted hover:text-text underline">
             Limpiar filtros
           </button>
         )}
@@ -586,6 +630,38 @@ export default function TableroPage() {
               >
                 <span className="w-2 h-2 rounded-full" style={{ background: o.color }} />
                 {o.label} <span className="text-textMuted">{cantidad}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {columnaResponsable && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3" data-tour="tablero-filtro-responsable">
+          <button
+            onClick={() => setFiltroResponsables([])}
+            className={`h-6 px-2.5 rounded-full text-[11px] font-medium border ${!filtroResponsables.length ? 'border-text' : 'border-border'} bg-surface2 hover:border-text`}
+          >
+            Todos <span className="text-textMuted">{poolParaContarResponsables.length}</span>
+          </button>
+          {usuariosEquipo.length > 8 && (
+            <input
+              value={busquedaResponsable} onChange={(e) => setBusquedaResponsable(e.target.value)}
+              placeholder="🔎 responsable…" className="h-6 bg-surface2 border border-border rounded-full px-2.5 text-[11px] w-32 outline-none"
+            />
+          )}
+          {opcionesResponsableVisibles.map((o) => {
+            const activo = filtroResponsables.includes(o.email);
+            return (
+              <button
+                key={o.email}
+                onClick={() => alternarFiltroResponsable(o.email)}
+                className={`h-6 pl-1 pr-2.5 rounded-full text-[11px] font-medium flex items-center gap-1 border ${activo ? 'border-text' : 'border-border'} bg-surface2 hover:border-text`}
+              >
+                <span className="w-4 h-4 rounded-full bg-accentPurple text-white flex items-center justify-center text-[9px] font-bold shrink-0">
+                  {o.email === '__sin__' ? '—' : o.nombre.slice(0, 1).toUpperCase()}
+                </span>
+                {o.nombre} <span className="text-textMuted">{o.cantidad}</span>
               </button>
             );
           })}
