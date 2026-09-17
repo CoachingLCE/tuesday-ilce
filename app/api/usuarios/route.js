@@ -13,6 +13,8 @@ export const GET = conManejo(async (request) => {
 
   const [usuarios, historial] = await Promise.all([listarUsuarios(), leerHistorialCompleto()]);
 
+  // El último login de cada email es la entrada "Inició sesión" más reciente en el Historial
+  // (leerHistorialCompleto ya viene ordenado de más reciente a más viejo).
   const conUltimoLogin = usuarios.map((u) => {
     const ultimo = historial.find((h) => h.accion === 'Inició sesión' && h.email?.toLowerCase() === u.email?.toLowerCase());
     const totalLogins = historial.filter((h) => h.accion === 'Inició sesión' && h.email?.toLowerCase() === u.email?.toLowerCase()).length;
