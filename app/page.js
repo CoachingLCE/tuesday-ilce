@@ -73,10 +73,71 @@ export default function TableroPage() {
       setItems(dataTablero.items || []);
       setUsuariosEquipo(dataUsuarios.usuarios || []);
       setActividadGlobal(dataActividad.actividad || []);
+
+      // Tablero recién creado (sin columnas ni grupos): se carga un ejemplo armado para
+      // que se vea y se pueda probar de entrada, en vez de una pantalla vacía. Solo pasa
+      // una vez — apenas exista una columna o un grupo, esto no se vuelve a disparar.
+      if (!(dataTablero.grupos || []).length && !(dataTablero.columnas || []).length) {
+        await sembrarTableroDeEjemplo();
+      }
     } catch {
       setError('Error de conexión.');
     } finally {
       setCargandoTablero(false);
+    }
+  }
+
+  async function sembrarTableroDeEjemplo() {
+    const colEstado = {
+      id: 'col_estado_seed', nombre: 'Estado', tipo: 'status', orden: 0,
+      opciones: [
+        { id: 'op_idea', label: 'Idea', color: '#94a3b8' },
+        { id: 'op_proceso', label: 'En proceso', color: '#4c6fff' },
+        { id: 'op_corregir', label: 'Para corregir', color: '#f59e0b' },
+        { id: 'op_subir', label: 'Para subir', color: '#a855f7' },
+        { id: 'op_listo', label: 'Listo', color: '#22c55e' }
+      ]
+    };
+    const colTipo = {
+      id: 'col_tipo_seed', nombre: 'Tipo', tipo: 'status', orden: 1,
+      opciones: [
+        { id: 'op_reels', label: 'Reels', color: '#ec4899' },
+        { id: 'op_post', label: 'Post', color: '#06b6d4' },
+        { id: 'op_historia', label: 'Historia', color: '#f97316' },
+        { id: 'op_news', label: 'Newsletter', color: '#8b5cf6' }
+      ]
+    };
+    const colResponsable = { id: 'col_resp_seed', nombre: 'Responsable', tipo: 'person', orden: 2, opciones: [] };
+    const colFecha = { id: 'col_fecha_seed', nombre: 'Fecha', tipo: 'date', orden: 3, opciones: [] };
+
+    await crearColumna(colEstado);
+    await crearColumna(colTipo);
+    await crearColumna(colResponsable);
+    await crearColumna(colFecha);
+
+    const colorSeptiembre = colorSiguiente([]);
+    const colorAgosto = colorSiguiente([colorSeptiembre]);
+    await guardarGrupoNuevo({ id: 'gr_septiembre_seed', nombre: 'Septiembre', color: colorSeptiembre, orden: 0 });
+    await guardarGrupoNuevo({ id: 'gr_agosto_seed', nombre: 'Agosto', color: colorAgosto, orden: 1 });
+
+    const cell = (estado, tipo) => ({ [colEstado.id]: estado, [colTipo.id]: tipo });
+    const ahora = new Date().toISOString();
+    const base = (id, grupoId, nombre, orden, estado, tipo) => ({
+      id, grupoId, nombre, orden, cells: cell(estado, tipo), body: '', creadoPor: 'Ejemplo', creadoEn: ahora
+    });
+
+    const itemsEjemplo = [
+      base('it_seed_1', 'gr_septiembre_seed', 'Reel tips de estudio', 0, 'op_listo', 'op_reels'),
+      base('it_seed_2', 'gr_septiembre_seed', 'Post bienvenida al mes', 1, 'op_listo', 'op_post'),
+      base('it_seed_3', 'gr_septiembre_seed', 'Historia sorteo', 2, 'op_proceso', 'op_historia'),
+      base('it_seed_4', 'gr_septiembre_seed', 'Newsletter mensual', 3, 'op_corregir', 'op_news'),
+      base('it_seed_5', 'gr_septiembre_seed', 'Reel testimonios', 4, 'op_listo', 'op_reels'),
+      base('it_seed_6', 'gr_agosto_seed', 'Post cierre de agosto', 0, 'op_listo', 'op_post'),
+      base('it_seed_7', 'gr_agosto_seed', 'Post recordatorio inscripciones', 1, 'op_subir', 'op_post')
+    ];
+    for (const it of itemsEjemplo) {
+      // eslint-disable-next-line no-await-in-loop
+      await guardarItemNuevo(it);
     }
   }
 
@@ -109,23 +170,27 @@ export default function TableroPage() {
   }
 
   /* ---------------- grupos ---------------- */
-  async function crearGrupo(nombre) {
-    const usados = grupos.map((g) => g.color);
-    const id = nuevoId('gr');
-    const color = colorSiguiente(usados);
-    const orden = grupos.length;
-    setGrupos((prev) => [...prev, { id, nombre, color, orden }]);
+  async function guardarGrupoNuevo(grupo) {
+    setGrupos((prev) => [...prev, grupo]);
     try {
       await conIndicadorGuardado(async () => {
         const res = await fetchAutenticado('/api/tablero/grupos', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, nombre, color, orden })
+          body: JSON.stringify(grupo)
         });
         if (!res.ok) throw new Error();
       });
     } catch {
       setError('No se pudo crear el grupo. Refrescá la página.');
     }
+  }
+
+  async function crearGrupo(nombre) {
+    const usados = grupos.map((g) => g.color);
+    const id = nuevoId('gr');
+    const color = colorSiguiente(usados);
+    const orden = grupos.length;
+    await guardarGrupoNuevo({ id, nombre, color, orden });
   }
 
   async function actualizarGrupo(id, cambios) {
@@ -168,22 +233,25 @@ export default function TableroPage() {
   }
 
   /* ---------------- items ---------------- */
-  async function crearItem(grupoId, nombre) {
-    const id = nuevoId('it');
-    const orden = items.filter((it) => it.grupoId === grupoId).length;
-    const itemNuevo = { id, grupoId, nombre, orden, cells: {}, body: '', creadoPor: usuario.nombre, creadoEn: new Date().toISOString() };
-    setItems((prev) => [...prev, itemNuevo]);
+  async function guardarItemNuevo(item) {
+    setItems((prev) => [...prev, item]);
     try {
       await conIndicadorGuardado(async () => {
         const res = await fetchAutenticado('/api/tablero/items', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, grupoId, nombre, orden, cells: {}, body: '' })
+          body: JSON.stringify(item)
         });
         if (!res.ok) throw new Error();
       });
     } catch {
       setError('No se pudo crear el contenido. Refrescá la página.');
     }
+  }
+
+  async function crearItem(grupoId, nombre) {
+    const id = nuevoId('it');
+    const orden = items.filter((it) => it.grupoId === grupoId).length;
+    await guardarItemNuevo({ id, grupoId, nombre, orden, cells: {}, body: '', creadoPor: usuario.nombre, creadoEn: new Date().toISOString() });
   }
 
   async function actualizarItem(itemId, cambios, actividadTexto) {
