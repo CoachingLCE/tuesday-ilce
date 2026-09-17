@@ -3,6 +3,7 @@ import { conManejo } from '../../../../lib/apiHandler';
 import { requireUsuario } from '../../../../lib/requireUsuario';
 import { tienePermisoVer } from '../../../../lib/permisos';
 import { crearItem, crearActividad } from '../../../../lib/datosTablero';
+import { registrarAccion } from '../../../../lib/auditoria';
 
 export const POST = conManejo(async (request) => {
   const usuario = await requireUsuario(request);
@@ -17,6 +18,7 @@ export const POST = conManejo(async (request) => {
     cells: body.cells || {}, body: body.body || '', creadoPor: usuario.nombre
   });
   await crearActividad({ id: `${body.id}-a${Date.now()}`, itemId: body.id, autor: usuario.nombre, texto: 'creó el contenido' });
+  await registrarAccion(usuario.email, usuario.nombre, 'Creó contenido en el tablero', body.nombre || body.id);
 
   return NextResponse.json({ ok: true });
 })
