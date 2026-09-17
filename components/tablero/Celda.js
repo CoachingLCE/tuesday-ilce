@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 function useClickOutside(ref, onOutside) {
   useEffect(() => {
@@ -50,6 +51,14 @@ function CeldaEstado({ columna, valor, onGuardar }) {
   );
 }
 
+// Un contenido puede tener uno o varios responsables: el valor de la celda es un array de
+// emails. Sigue aceptando el formato viejo (un email suelto como texto) para no romper
+// contenidos ya cargados antes de este cambio.
+function normalizarResponsables(valor) {
+  if (Array.isArray(valor)) return valor;
+  return valor ? [valor] : [];
+}
+
 function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPersonas, onCrearPersona }) {
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState('');
@@ -57,11 +66,54 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPer
   const [emailNuevo, setEmailNuevo] = useState('');
   const [creando, setCreando] = useState(false);
   const [errorCreando, setErrorCreando] = useState('');
-  const ref = useRef(null);
-  useClickOutside(ref, () => setAbierto(false));
-  const persona = usuariosEquipo.find((u) => u.email === valor);
+  const [posicion, setPosicion] = useState(null);
+  const triggerRef = useRef(null);
+  const popoverRef = useRef(null);
+
+  const seleccionados = normalizarResponsables(valor);
+  const personas = seleccionados.map((email) => usuariosEquipo.find((u) => u.email === email)).filter(Boolean);
   const filtrados = usuariosEquipo.filter((u) => u.nombre.toLowerCase().includes(busqueda.toLowerCase()));
   const hayCoincidenciaExacta = usuariosEquipo.some((u) => u.nombre.toLowerCase() === busqueda.trim().toLowerCase());
+
+  // El menú se dibuja con un portal directo a <body> (no adentro de la celda), así no lo
+  // recorta el ancho de la columna ni el scroll horizontal de la tabla.
+  useEffect(() => {
+    if (!abierto) return;
+    function onClickFuera(e) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        popoverRef.current && !popoverRef.current.contains(e.target)
+      ) {
+        setAbierto(false);
+      }
+    }
+    function cerrar() { setAbierto(false); }
+    document.addEventListener('mousedown', onClickFuera);
+    window.addEventListener('scroll', cerrar, true);
+    window.addEventListener('resize', cerrar);
+    return () => {
+      document.removeEventListener('mousedown', onClickFuera);
+      window.removeEventListener('scroll', cerrar, true);
+      window.removeEventListener('resize', cerrar);
+    };
+  }, [abierto]);
+
+  function abrir() {
+    const r = triggerRef.current.getBoundingClientRect();
+    const ancho = 280; // 250-300px pedido
+    let left = r.left;
+    if (left + ancho > window.innerWidth - 8) left = Math.max(8, window.innerWidth - ancho - 8);
+    setPosicion({ top: r.bottom + 4, left, ancho });
+    setBusqueda('');
+    setFormularioAbierto(false);
+    setAbierto(true);
+  }
+
+  function alternar(u) {
+    const yaEsta = seleccionados.includes(u.email);
+    const nuevos = yaEsta ? seleccionados.filter((e) => e !== u.email) : [...seleccionados, u.email];
+    onGuardar(nuevos, yaEsta ? `quitó a ${u.nombre} de ${columna.nombre}` : `asignó ${columna.nombre} a ${u.nombre}`);
+  }
 
   async function crear(e) {
     e.preventDefault();
@@ -71,8 +123,8 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPer
     try {
       const resultado = await onCrearPersona(busqueda.trim(), emailNuevo.trim());
       if (resultado?.email) {
-        onGuardar(resultado.email, `asignó ${columna.nombre} a ${busqueda.trim()} (persona nueva)`);
-        setAbierto(false); setBusqueda(''); setFormularioAbierto(false); setEmailNuevo('');
+        onGuardar([...seleccionados, resultado.email], `asignó ${columna.nombre} a ${busqueda.trim()} (persona nueva)`);
+        setBusqueda(''); setFormularioAbierto(false); setEmailNuevo('');
       } else {
         setErrorCreando(resultado?.error || 'No se pudo crear.');
       }
@@ -82,36 +134,50 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPer
   }
 
   return (
-    <div className="relative" ref={ref}>
-      <button onClick={() => setAbierto((v) => !v)} className="w-full h-9 rounded text-xs flex items-center gap-1.5 px-2 hover:bg-surface2 truncate">
-        {persona ? (
-          <>
-            <span className="w-5 h-5 rounded-full bg-accentPurple text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-              {persona.nombre.slice(0, 1).toUpperCase()}
+    <div ref={triggerRef}>
+      <button onClick={() => (abierto ? setAbierto(false) : abrir())} className="w-full h-9 rounded text-xs flex items-center gap-1 px-2 hover:bg-surface2 overflow-hidden">
+        {personas.length ? (
+          <div className="flex items-center gap-1 overflow-hidden">
+            <div className="flex items-center -space-x-1.5 shrink-0">
+              {personas.slice(0, 3).map((p) => (
+                <span key={p.email} title={p.nombre} className="w-6 h-6 rounded-full bg-accentPurple text-white flex items-center justify-center text-[10px] font-bold border-2 border-surface">
+                  {p.nombre.slice(0, 1).toUpperCase()}
+                </span>
+              ))}
+            </div>
+            <span className="truncate">
+              {personas.length > 2 ? `${personas[0].nombre} +${personas.length - 1}` : personas.map((p) => p.nombre).join(', ')}
             </span>
-            <span className="truncate">{persona.nombre}</span>
-          </>
+          </div>
         ) : <span className="text-textMuted">+ Asignar</span>}
       </button>
-      {abierto && (
-        <div className="absolute z-20 top-full left-0 mt-1 w-52 bg-surface2 border border-border rounded-lg shadow-xl p-1.5">
+      {abierto && posicion && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ position: 'fixed', top: posicion.top, left: posicion.left, width: posicion.ancho, zIndex: 100 }}
+          className="bg-surface2 border border-border rounded-lg shadow-xl p-1.5"
+        >
           <input
             autoFocus value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar…" className="w-full bg-bg border border-border rounded px-2 py-1 text-xs mb-1.5"
+            placeholder="Buscar…" className="w-full bg-bg border border-border rounded px-2 py-1.5 text-xs mb-1.5"
           />
-          <div className="max-h-48 overflow-y-auto">
-            {filtrados.map((u) => (
-              <button
-                key={u.email}
-                onClick={() => { onGuardar(u.email, `asignó ${columna.nombre} a ${u.nombre}`); setAbierto(false); setBusqueda(''); }}
-                className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-bg flex items-center gap-1.5"
-              >
-                <span className="w-5 h-5 rounded-full bg-accentPurple text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-                  {u.nombre.slice(0, 1).toUpperCase()}
-                </span>
-                {u.nombre}
-              </button>
-            ))}
+          <div className="max-h-56 overflow-y-auto">
+            {filtrados.map((u) => {
+              const activo = seleccionados.includes(u.email);
+              return (
+                <button
+                  key={u.email}
+                  onClick={() => alternar(u)}
+                  className={`w-full text-left text-xs px-2 py-2 rounded flex items-center gap-2 mb-0.5 ${activo ? 'bg-accentTeal/15' : 'hover:bg-bg'}`}
+                >
+                  <span className="w-6 h-6 rounded-full bg-accentPurple text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                    {u.nombre.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="flex-1 truncate">{u.nombre}</span>
+                  {activo && <span className="text-accentTeal shrink-0">✓</span>}
+                </button>
+              );
+            })}
             {!filtrados.length && <p className="text-xs text-textMuted px-2 py-1.5">Nadie coincide.</p>}
           </div>
           {puedeCrearPersonas && busqueda.trim() && !hayCoincidenciaExacta && (
@@ -140,12 +206,16 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPer
               </button>
             )
           )}
-          {valor && (
-            <button onClick={() => { onGuardar('', `quitó ${columna.nombre}`); setAbierto(false); }} className="w-full text-left text-xs text-textMuted px-2 py-1 mt-1 border-t border-border pt-1.5">
-              Quitar
-            </button>
-          )}
-        </div>
+          <div className="flex items-center justify-between mt-1 border-t border-border pt-1.5">
+            {seleccionados.length > 0 ? (
+              <button onClick={() => onGuardar([], `quitó a todos de ${columna.nombre}`)} className="text-xs text-textMuted hover:text-dangerText px-1">
+                Quitar todos
+              </button>
+            ) : <span />}
+            <button onClick={() => setAbierto(false)} className="text-xs text-accentTeal font-semibold px-2 py-1">Listo ✓</button>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

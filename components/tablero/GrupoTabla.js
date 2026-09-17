@@ -38,11 +38,16 @@ export default function GrupoTabla({
 
   return (
     <div className="mb-6 rounded-xl border border-border bg-surface overflow-hidden" data-tour="tablero-grupo">
-      <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderLeft: `4px solid ${grupo.color}` }}>
-        <button onClick={() => setColapsado((v) => !v)} className="text-textMuted hover:text-text text-xs w-5">
+      <div
+        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
+        style={{ borderLeft: `4px solid ${grupo.color}` }}
+        onClick={() => setColapsado((v) => !v)}
+        title={colapsado ? 'Mostrar contenidos' : 'Ocultar contenidos'}
+      >
+        <span className="text-textMuted hover:text-text text-xs w-5">
           {colapsado ? '▸' : '▾'}
-        </button>
-        <div className="relative" ref={colorRef}>
+        </span>
+        <div className="relative" ref={colorRef} onClick={(e) => e.stopPropagation()}>
           <button onClick={() => setColorAbierto((v) => !v)} className="w-4 h-4 rounded-full shrink-0" style={{ background: grupo.color }} title="Cambiar color" />
           {colorAbierto && (
             <div className="absolute z-20 top-full left-0 mt-1 bg-surface2 border border-border rounded-lg shadow-xl p-2 flex flex-wrap gap-1.5 w-40">
@@ -56,27 +61,28 @@ export default function GrupoTabla({
           <input
             autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)}
             onBlur={guardarNombre} onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+            onClick={(e) => e.stopPropagation()}
             className="bg-bg border border-accentTeal rounded px-2 py-1 text-sm font-semibold outline-none"
           />
         ) : (
-          <button onClick={() => setEditandoNombre(true)} className="text-sm font-semibold hover:underline">{grupo.nombre}</button>
+          <button onClick={(e) => { e.stopPropagation(); setEditandoNombre(true); }} className="text-sm font-semibold hover:underline">{grupo.nombre}</button>
         )}
         <span className="text-xs text-textMuted">{items.length}</span>
         <div className="flex-1" />
         {puedeEditarEstructura && (
-          <button onClick={onEliminarGrupo} className="text-xs text-textMuted hover:text-dangerText" title="Eliminar grupo">🗑</button>
+          <button onClick={(e) => { e.stopPropagation(); onEliminarGrupo(); }} className="text-xs text-textMuted hover:text-dangerText" title="Eliminar grupo">🗑</button>
         )}
       </div>
 
       {!colapsado && (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full text-sm border-collapse table-fixed">
               <thead>
                 <tr className="border-t border-border">
-                  <th className="text-left text-xs text-textMuted font-medium px-4 py-2.5 min-w-[240px]">Nombre</th>
+                  <th className="text-left text-xs text-textMuted font-medium px-4 py-2.5 w-[220px]">Nombre</th>
                   {columnas.map((c) => (
-                    <th key={c.id} className="text-left text-xs text-textMuted font-medium px-3 py-2.5 min-w-[160px]">{c.nombre}</th>
+                    <th key={c.id} className="text-left text-xs text-textMuted font-medium px-3 py-2.5">{c.nombre}</th>
                   ))}
                   {puedeEditarEstructura && (
                     <th className="px-3 py-2.5 w-10">
@@ -95,7 +101,7 @@ export default function GrupoTabla({
                       </button>
                     </td>
                     {columnas.map((c) => (
-                      <td key={c.id} className="px-2 py-2">
+                      <td key={c.id} className="px-2 py-2 overflow-visible">
                         <Celda
                           columna={c} valor={item.cells?.[c.id]} usuariosEquipo={usuariosEquipo}
                           onGuardar={(v, txt) => onActualizarCelda(item, c, v, txt)}
