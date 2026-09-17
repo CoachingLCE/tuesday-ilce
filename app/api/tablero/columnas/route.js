@@ -3,6 +3,7 @@ import { conManejo } from '../../../../lib/apiHandler';
 import { requireUsuario } from '../../../../lib/requireUsuario';
 import { tienePermisoEditarEstructura } from '../../../../lib/permisos';
 import { crearColumna } from '../../../../lib/datosTablero';
+import { registrarAccion } from '../../../../lib/auditoria';
 
 // Agregar/quitar columnas es estructura del tablero: reservado a Admin/SuperAdmin.
 export const POST = conManejo(async (request) => {
@@ -14,5 +15,6 @@ export const POST = conManejo(async (request) => {
   if (!body.id || !body.nombre) return NextResponse.json({ error: 'Faltan datos.' }, { status: 400 });
 
   await crearColumna({ id: body.id, nombre: body.nombre, tipo: body.tipo || 'text', orden: body.orden ?? 0, opciones: body.opciones || [] });
+  await registrarAccion(usuario.email, usuario.nombre, 'Creó columna en el tablero', `${body.nombre} (${body.tipo || 'text'})`);
   return NextResponse.json({ ok: true });
 })
