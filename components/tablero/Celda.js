@@ -232,7 +232,10 @@ function CeldaFecha({ columna, valor, onGuardar }) {
       type="date"
       value={valor || ''}
       onChange={(e) => onGuardar(e.target.value, e.target.value ? `cambió ${columna.nombre} a ${e.target.value}` : `quitó ${columna.nombre}`)}
-      className="w-full h-9 bg-transparent hover:bg-surface2 rounded text-xs px-2 border-none outline-none text-text"
+      // El ícono del calendario nativo del navegador es oscuro fijo — en modo oscuro
+      // queda invisible sobre el fondo. [&::-webkit-calendar-picker-indicator] lo invierte
+      // (queda claro) solo para navegadores basados en Chromium/WebKit.
+      className="w-full h-9 bg-transparent hover:bg-surface2 rounded text-xs px-2 border-none outline-none text-text [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
     />
   );
 }

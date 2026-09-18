@@ -43,8 +43,10 @@ Se completa sola a medida que se usan/editan columnas. `Tipo` es uno de: `status
 |---|---|---|---|---|
 
 ### `TableroActividad`
-| Id | ItemId | Autor | Texto | Fecha |
-|---|---|---|---|---|
+| Id | ItemId | Autor | Texto | Fecha | Para |
+|---|---|---|---|---|---|
+
+La columna `Para` es opcional (si el Sheet ya existe de antes y no la tenés, la app sigue funcionando igual, solo que sin poder separar "Para mí" de la actividad general) — ahí se guarda, en JSON, a quién le corresponde esa actividad como notificación personal (por ejemplo `["ana@ilce.com"]`), porque la mencionaron con @ o la asignaron como responsable.
 
 Para las últimas 5 pestañas alcanza con crear la hoja y poner solo la fila de encabezados — la app las va llenando sola.
 
@@ -76,14 +78,18 @@ No hacen falta (todavía) `GMAIL_USER`, `GMAIL_APP_PASSWORD` ni `CRON_SECRET` �
 
 ### 2.1) Carpeta de Drive para los archivos subidos
 
-Como Google Sheets no puede guardar archivos, los adjuntos que subís desde la columna "Archivos" se guardan en una carpeta de Google Drive:
+Como Google Sheets no puede guardar archivos, los adjuntos que subís desde la columna "Archivos" se guardan en una carpeta de Google Drive.
 
-1. Creá una carpeta nueva en Drive (por ejemplo, "Tuesday ILCE — Archivos").
-2. Compartila (botón "Compartir") con el mismo email de siempre, como **Editor**:
+**Importante — tiene que ser una carpeta dentro de una Unidad compartida (Shared Drive), no una carpeta común de "Mi unidad":** la cuenta de servicio (`carga-clases-bot@...`) no es una persona con una cuenta de Google Workspace, así que no tiene almacenamiento propio. Si le pedís que suba un archivo a una carpeta común, Google devuelve el error *"Service Accounts do not have storage quota"* — es justo lo que pasó al principio. Una Unidad compartida es distinta: el almacenamiento es de la unidad (lo paga la organización), no de cada persona o cuenta que tiene acceso, así que ahí sí puede subir archivos sin problema.
+
+1. En Google Drive, creá una **Unidad compartida** nueva (no una carpeta común) — botón "Unidades compartidas" en el menú de la izquierda → "Nueva". Nombrala, por ejemplo, "Tuesday ILCE".
+   - Hace falta un plan de Google Workspace que incluya Unidades compartidas (los planes de negocio/organización lo incluyen; una cuenta de Gmail personal gratuita no puede crear una).
+2. Agregá a la cuenta de servicio como miembro de esa Unidad compartida, con permiso **Gestor de contenido** (Content Manager) o superior:
    ```
    carga-clases-bot@carga-clases-ilce.iam.gserviceaccount.com
    ```
-3. Sacá el ID de la carpeta de su URL (`https://drive.google.com/drive/folders/EL_ID_VA_ACA`) y cargalo como `GOOGLE_DRIVE_FOLDER_ID` en Vercel.
+3. Adentro de la Unidad compartida, podés crear una subcarpeta si querés (por ejemplo "Archivos") o usar la unidad directamente. Sacá el ID de esa carpeta (o de la unidad) de su URL (`https://drive.google.com/drive/folders/EL_ID_VA_ACA`) y cargalo como `GOOGLE_DRIVE_FOLDER_ID` en Vercel.
+4. Si ya habías creado una carpeta común (no compartida) antes de saber esto, no hace falta borrar nada: simplemente creá la Unidad compartida como se explica arriba y actualizá `GOOGLE_DRIVE_FOLDER_ID` en Vercel para que apunte a la carpeta nueva. Los archivos que ya se hayan subido antes del cambio no se mueven solos, pero los nuevos van a la carpeta correcta.
 
 Cada archivo que se sube queda visible para "cualquiera con el link" (de solo lectura) — es necesario para que se pueda ver la miniatura y la vista previa dentro del tablero sin pedir que cada persona inicie sesión con Google. El límite actual es **4 MB por archivo** (es el límite que impone Vercel al tamaño de una request, no algo que podamos subir desde acá).
 

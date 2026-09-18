@@ -18,6 +18,36 @@ function horaCorta(fecha) {
   return fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
+// "Última vez que vi la actividad" persistido en localStorage por usuario y por pestaña
+// (general / para mí) — así al volver a entrar no vuelven a aparecer como nuevas las
+// notificaciones que ya se vieron en una visita anterior (antes se reseteaba en cada carga
+// de la página, porque vivía solo en un useState).
+const CLAVE_VISTO_ACTIVIDAD = 'tuesday_ilce_actividad_vista';
+
+function leerVistasGuardadas(email) {
+  if (typeof window === 'undefined' || !email) return {};
+  try {
+    const datos = JSON.parse(window.localStorage.getItem(CLAVE_VISTO_ACTIVIDAD) || '{}');
+    return datos[email] || {};
+  } catch { return {}; }
+}
+
+function guardarVista(email, tab, iso) {
+  if (typeof window === 'undefined' || !email) return;
+  try {
+    const datos = JSON.parse(window.localStorage.getItem(CLAVE_VISTO_ACTIVIDAD) || '{}');
+    datos[email] = { ...(datos[email] || {}), [tab]: iso };
+    window.localStorage.setItem(CLAVE_VISTO_ACTIVIDAD, JSON.stringify(datos));
+  } catch { /* si falla localStorage (privado, cuota, etc.) simplemente no persiste */ }
+}
+
+// Cuenta cuántos de la lista son posteriores a la última vez vista; si nunca se vio esa
+// pestaña, se cuenta solo lo de hoy (mismo criterio "amigable" que había antes).
+function contarSinVer(lista, ultimaVistaIso) {
+  const desde = ultimaVistaIso ? new Date(ultimaVistaIso) : new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00`);
+  return lista.filter((a) => a.fecha && new Date(a.fecha) > desde).length;
+}
+
 export default function TableroPage() {
   const { usuario, cargando, fetchAutenticado } = useSession();
   const router = useRouter();
@@ -46,7 +76,7 @@ export default function TableroPage() {
   const [actividadGlobal, setActividadGlobal] = useState([]);
   const [cargandoActividadGlobal, setCargandoActividadGlobal] = useState(false);
   const [mostrarActividadGlobal, setMostrarActividadGlobal] = useState(false);
-  const [actividadVistaCount, setActividadVistaCount] = useState(0);
+  const [vistasActividad, setVistasActividad] = useState({});
 
   const [cargandoEjemplo, setCargandoEjemplo] = useState(false);
 
@@ -62,6 +92,16 @@ export default function TableroPage() {
     if (usuario) cargarTodo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario]);
+
+  useEffect(() => {
+    if (usuario?.email) setVistasActividad(leerVistasGuardadas(usuario.email));
+  }, [usuario?.email]);
+
+  function marcarVistaActividad(tab) {
+    const ahora = new Date().toISOString();
+    setVistasActividad((v) => ({ ...v, [tab]: ahora }));
+    guardarVista(usuario?.email, tab, ahora);
+  }
 
   async function cargarTodo() {
     setCargandoTablero(true);
@@ -217,6 +257,12 @@ export default function TableroPage() {
   function abrirActividadGlobal() {
     setMostrarActividadGlobal(true);
     refrescarActividadGlobal();
+  }
+
+  // Se llama al abrir el panel y cada vez que se cambia de pestaña adentro — así lo que se
+  // marca como "visto" es justo lo que la persona efectivamente miró, pestaña por pestaña.
+  function onCambiarTabActividad(tab) {
+    marcarVistaActividad(tab);
   }
 
   /* Indicador de guardado ("Guardando… / ✓ Guardado hh:mm") — envuelve las mutaciones
@@ -589,13 +635,16 @@ export default function TableroPage() {
   const gruposOrdenados = useMemo(() => [...grupos].sort((a, b) => a.orden - b.orden), [grupos]);
   const itemSeleccionado = items.find((it) => it.id === itemSeleccionadoId);
   const hayFiltrosActivos = busqueda || filtroEstado || (filtroTab && filtroTab !== 'todos') || filtroResponsables.length > 0;
-  const actividadHoy = actividadGlobal.filter((a) => (a.fecha || '').slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
-  // Mientras el panel de actividad está abierto, lo damos por "visto" — el número del
-  // 🔔 solo cuenta lo que pasó desde la última vez que se abrió.
-  useEffect(() => {
-    if (mostrarActividadGlobal) setActividadVistaCount(actividadHoy);
-  }, [mostrarActividadGlobal, actividadHoy]);
-  const actividadSinVer = Math.max(0, actividadHoy - actividadVistaCount);
+  const actividadParaMi = useMemo(
+    () => (usuario ? actividadGlobal.filter((a) => (a.para || []).includes(usuario.email)) : []),
+    [actividadGlobal, usuario]
+  );
+  const sinVerGeneral = contarSinVer(actividadGlobal, vistasActividad.general);
+  const sinVerParaMi = contarSinVer(actividadParaMi, vistasActividad.paraMi);
+  // El número del 🔔 es el total de actividad no vista (la de "Para mí" ya está incluida
+  // ahí, porque es un subconjunto de toda la actividad) — adentro del panel, cada pestaña
+  // tiene además su propio contador.
+  const actividadSinVer = sinVerGeneral;
 
   if (cargando || !usuario) return null;
 
@@ -833,7 +882,12 @@ export default function TableroPage() {
         <ActividadGlobal
           actividad={actividadGlobal}
           items={items}
+          usuario={usuario}
           cargando={cargandoActividadGlobal}
+          tabInicial={sinVerParaMi > 0 ? 'paraMi' : 'general'}
+          sinVerGeneral={sinVerGeneral}
+          sinVerParaMi={sinVerParaMi}
+          onCambiarTab={onCambiarTabActividad}
           onCerrar={() => setMostrarActividadGlobal(false)}
           onAbrirItem={(id) => { setMostrarActividadGlobal(false); setItemSeleccionadoId(id); }}
         />

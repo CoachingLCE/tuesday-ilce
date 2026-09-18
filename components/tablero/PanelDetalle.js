@@ -1,9 +1,28 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Celda from './Celda';
 
 function escaparHtml(texto) {
   return texto.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+
+const URL_REGEX = /(https?:\/\/[^\s<>"']+)/g;
+
+// Convierte URLs sueltas en texto a links <a> clickeables, sin tocar lo que ya está
+// dentro de una etiqueta <a> (para no terminar con links anidados al pasarlo dos veces).
+function linkificarHtml(html) {
+  const partes = html.split(/(<a\b[^>]*>[\s\S]*?<\/a>)/gi);
+  return partes
+    .map((parte) => {
+      if (/^<a\b/i.test(parte)) return parte;
+      return parte.replace(URL_REGEX, (url) => {
+        const limpio = url.replace(/[.,;:!?)]+$/, ''); // no arrastrar puntuación final
+        const sobra = url.slice(limpio.length);
+        return `<a href="${limpio}" target="_blank" rel="noreferrer" class="text-accentTeal underline">${limpio}</a>${sobra}`;
+      });
+    })
+    .join('');
 }
 
 function comentarioAHtml(texto, usuariosEquipo) {
@@ -12,7 +31,8 @@ function comentarioAHtml(texto, usuariosEquipo) {
     const escapado = u.nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     html = html.replace(new RegExp(`@${escapado}`, 'g'), `<strong class="text-accentTeal">@${u.nombre}</strong>`);
   });
-  return html.replace(/\n/g, '<br/>');
+  html = html.replace(/\n/g, '<br/>');
+  return linkificarHtml(html);
 }
 
 function formatearFecha(iso) {
@@ -36,6 +56,13 @@ export default function PanelDetalle({
   const [mostrarActividad, setMostrarActividad] = useState(false);
   const [actividad, setActividad] = useState([]);
   const [cargandoActividad, setCargandoActividad] = useState(false);
+
+  // @menciones dentro de la Descripción (mismo mecanismo que en Comentarios, pero acá el
+  // campo es un contentEditable en vez de un <textarea>, así que hace falta ubicar el
+  // cursor con la Selection API en vez de con selectionStart).
+  const [mentionBodyAbierto, setMentionBodyAbierto] = useState(false);
+  const [mentionBodyQuery, setMentionBodyQuery] = useState('');
+  const [mentionBodyPos, setMentionBodyPos] = useState(null);
 
   const bodyRef = useRef(null);
   const textareaRef = useRef(null);
@@ -83,8 +110,84 @@ export default function PanelDetalle({
   }
 
   function guardarBody() {
+    // Antes de guardar, convertimos cualquier URL suelta que haya quedado como texto
+    // plano (tipeada a mano, o pegada junto con más texto) en un link clickeable.
+    if (bodyRef.current) {
+      const conLinks = linkificarHtml(bodyRef.current.innerHTML);
+      if (conLinks !== bodyRef.current.innerHTML) bodyRef.current.innerHTML = conLinks;
+    }
     const html = bodyRef.current?.innerHTML || '';
     if (html !== (item.body || '')) onActualizarItem({ body: html }, 'editó la descripción');
+  }
+
+  // Si se pega SOLO una URL (el caso más común: copiar un link de Calendar, Drive, etc.),
+  // se inserta directamente como link clickeable en vez de texto plano.
+  function onPasteBody(e) {
+    const texto = e.clipboardData?.getData('text/plain') || '';
+    if (/^https?:\/\/\S+$/.test(texto.trim())) {
+      e.preventDefault();
+      const url = texto.trim();
+      document.execCommand('insertHTML', false, `<a href="${url}" target="_blank" rel="noreferrer" class="text-accentTeal underline">${url}</a>`);
+    }
+  }
+
+  // Detecta "@algo" justo antes del cursor en la Descripción (igual que en Comentarios,
+  // pero con la Selection API porque este campo es un contentEditable) y abre el menú de
+  // sugerencias en esa posición.
+  function onInputBody() {
+    const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+    if (!sel || sel.rangeCount === 0 || !bodyRef.current?.contains(sel.anchorNode)) {
+      setMentionBodyAbierto(false);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    const nodo = range.startContainer;
+    if (nodo.nodeType !== Node.TEXT_NODE) { setMentionBodyAbierto(false); return; }
+    const hastaCursor = nodo.textContent.slice(0, range.startOffset);
+    const match = hastaCursor.match(/@([a-zA-ZÀ-ÿ0-9]*)$/);
+    if (!match) { setMentionBodyAbierto(false); return; }
+    setMentionBodyQuery(match[1].toLowerCase());
+    const rect = range.getClientRects()[0] || range.getBoundingClientRect();
+    setMentionBodyPos(rect && (rect.top || rect.left) ? { top: rect.bottom + 4, left: rect.left } : null);
+    setMentionBodyAbierto(true);
+  }
+
+  // Reemplaza el "@query" que quedó antes del cursor por la mención elegida, resaltada y
+  // no editable como una sola unidad, y deja el cursor justo después.
+  function elegirMencionBody(nombrePersona) {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) { setMentionBodyAbierto(false); return; }
+    const range = sel.getRangeAt(0);
+    const nodo = range.startContainer;
+    if (nodo.nodeType !== Node.TEXT_NODE) { setMentionBodyAbierto(false); return; }
+    const texto = nodo.textContent;
+    const cursor = range.startOffset;
+    const match = texto.slice(0, cursor).match(/@([a-zA-ZÀ-ÿ0-9]*)$/);
+    if (!match) { setMentionBodyAbierto(false); return; }
+    const inicio = cursor - match[0].length;
+
+    const nodoAntes = document.createTextNode(texto.slice(0, inicio));
+    const mencion = document.createElement('strong');
+    mencion.className = 'text-accentTeal';
+    mencion.textContent = `@${nombrePersona}`;
+    const espacio = document.createTextNode(' ');
+    const nodoDespues = document.createTextNode(texto.slice(cursor));
+
+    const padre = nodo.parentNode;
+    padre.insertBefore(nodoAntes, nodo);
+    padre.insertBefore(mencion, nodo);
+    padre.insertBefore(espacio, nodo);
+    padre.insertBefore(nodoDespues, nodo);
+    padre.removeChild(nodo);
+
+    const nuevoRange = document.createRange();
+    nuevoRange.setStart(nodoDespues, 0);
+    nuevoRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(nuevoRange);
+
+    setMentionBodyAbierto(false);
+    bodyRef.current?.focus();
   }
 
   function comando(cmd) {
@@ -146,6 +249,7 @@ export default function PanelDetalle({
   }
 
   const sugeridos = usuariosEquipo.filter((u) => u.nombre.toLowerCase().includes(mentionQuery)).slice(0, 6);
+  const sugeridosBody = usuariosEquipo.filter((u) => u.nombre.toLowerCase().includes(mentionBodyQuery)).slice(0, 6);
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end" data-tour="tablero-slideover">
@@ -199,9 +303,31 @@ export default function PanelDetalle({
               contentEditable
               suppressContentEditableWarning
               onBlur={guardarBody}
-              className="min-h-[100px] bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accentTeal"
+              onPaste={onPasteBody}
+              onInput={onInputBody}
+              onKeyUp={onInputBody}
+              className="min-h-[100px] bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accentTeal [&_a]:text-accentTeal [&_a]:underline"
               data-tour="tablero-descripcion"
             />
+            <p className="text-[10px] text-textMuted mt-1">Usá @ para mencionar a alguien del equipo y avisarle.</p>
+            {mentionBodyAbierto && sugeridosBody.length > 0 && mentionBodyPos && typeof document !== 'undefined' && createPortal(
+              <div
+                style={{ position: 'fixed', top: mentionBodyPos.top, left: mentionBodyPos.left, zIndex: 100 }}
+                className="w-52 bg-surface2 border border-border rounded-lg shadow-xl p-1"
+              >
+                {sugeridosBody.map((u) => (
+                  <button
+                    key={u.email}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); elegirMencionBody(u.nombre); }}
+                    className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-bg"
+                  >
+                    {u.nombre}
+                  </button>
+                ))}
+              </div>,
+              document.body
+            )}
           </div>
 
           <div className="mb-5">

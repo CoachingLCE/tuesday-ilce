@@ -92,7 +92,7 @@ export default function TourGuiado() {
     <>
       <button
         onClick={() => setMenuAbierto((v) => !v)}
-        className="fixed bottom-5 right-5 z-[90] bg-gradient-to-r from-accentPurple to-accentMagenta text-white text-sm font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-1.5 hover:opacity-90 transition-opacity no-print"
+        className="fixed bottom-14 right-5 z-[90] bg-gradient-to-r from-accentPurple to-accentMagenta text-white text-sm font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-1.5 hover:opacity-90 transition-opacity no-print"
       >
         ❓ Necesito ayuda
       </button>

@@ -7,6 +7,7 @@ import AccesoDenegado from '../../components/AccesoDenegado';
 
 const boxCls = 'bg-surface2 border border-border rounded-2xl p-5 mb-4';
 const inputCls = 'bg-bg border border-border rounded-lg px-2.5 py-2 text-sm';
+const inputFechaCls = `${inputCls} [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100`;
 
 // Colores distintos por persona, para reconocerla rápido en la lista sin leer el nombre —
 // el mismo nombre siempre cae en el mismo color (hash simple sobre una paleta fija).
@@ -111,11 +112,11 @@ export default function AuditoriaPage() {
             </div>
             <div>
               <label className="text-xs text-textSec block mb-1">Desde</label>
-              <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className={inputCls} />
+              <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className={inputFechaCls} />
             </div>
             <div>
               <label className="text-xs text-textSec block mb-1">Hasta</label>
-              <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className={inputCls} />
+              <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className={inputFechaCls} />
             </div>
             <div>
               <label className="text-xs text-textSec block mb-1">Buscar</label>
