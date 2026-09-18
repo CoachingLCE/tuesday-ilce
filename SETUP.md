@@ -70,7 +70,22 @@ En el proyecto de Vercel → Settings → Environment Variables (marcando Produc
 | `SESSION_SECRET` | Cualquier string largo y random, propio de esta app |
 | `SETUP_BOOTSTRAP_KEY` | Cualquier string largo y random — se usa una sola vez por persona para poner su primera contraseña, después no hace falta más |
 
+| `GOOGLE_DRIVE_FOLDER_ID` | El ID de una carpeta de Google Drive (ver punto 2.1 más abajo) — es donde se guardan de verdad los archivos que se suben desde la columna "Archivos" |
+
 No hacen falta (todavía) `GMAIL_USER`, `GMAIL_APP_PASSWORD` ni `CRON_SECRET` — no hay ninguna función de mail ni de tareas programadas en esta primera versión.
+
+### 2.1) Carpeta de Drive para los archivos subidos
+
+Como Google Sheets no puede guardar archivos, los adjuntos que subís desde la columna "Archivos" se guardan en una carpeta de Google Drive:
+
+1. Creá una carpeta nueva en Drive (por ejemplo, "Tuesday ILCE — Archivos").
+2. Compartila (botón "Compartir") con el mismo email de siempre, como **Editor**:
+   ```
+   carga-clases-bot@carga-clases-ilce.iam.gserviceaccount.com
+   ```
+3. Sacá el ID de la carpeta de su URL (`https://drive.google.com/drive/folders/EL_ID_VA_ACA`) y cargalo como `GOOGLE_DRIVE_FOLDER_ID` en Vercel.
+
+Cada archivo que se sube queda visible para "cualquiera con el link" (de solo lectura) — es necesario para que se pueda ver la miniatura y la vista previa dentro del tablero sin pedir que cada persona inicie sesión con Google. El límite actual es **4 MB por archivo** (es el límite que impone Vercel al tamaño de una request, no algo que podamos subir desde acá).
 
 ## 4) Primer ingreso
 
@@ -88,7 +103,7 @@ No hacen falta (todavía) `GMAIL_USER`, `GMAIL_APP_PASSWORD` ni `CRON_SECRET` �
 
 Decisiones a propósito, para que el tablero funcione de verdad con datos persistentes en Sheets (no en memoria del navegador):
 
-1. **Adjuntos = enlaces, con vista previa.** No hay carga de archivos desde tu computadora — pegás un link (de Drive, etc.) con un nombre, y la app detecta sola si es imagen/video/PDF/enlace común para mostrar una miniatura y abrirlo en grande (como el prototipo), pero el archivo en sí sigue viviendo donde lo hayas subido vos (Drive, etc.), no en la app.
+1. **Adjuntos = subida real de archivos**, guardados en una carpeta de Google Drive (ver 2.1) — subís el archivo desde tu computadora como en cualquier app, y se genera sola una miniatura y una vista previa (funciona para imágenes, PDFs, videos y documentos de Office). Límite: 4 MB por archivo.
 2. **"Responsable" = gente real del equipo**, la misma lista de `Usuarios`/Accesos. Admin/SuperAdmin pueden crear una persona nueva sin salir del tablero (desde el mismo selector de Responsable, tocando "+ Crear persona"), pero a diferencia del prototipo se les pide el email real (porque esa persona queda cargada en Usuarios y podría loguearse después) — no se crean "personas sueltas" sin email real.
 
 También: reordenar contenidos dentro de un grupo se hace con las flechitas ↑↓ (no arrastrando), y no hay arrastre entre grupos — para mover un contenido a otro grupo se usa el selector que está arriba de todo en su ficha de detalle.

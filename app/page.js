@@ -8,6 +8,7 @@ import GrupoTabla from '../components/tablero/GrupoTabla';
 import PanelDetalle from '../components/tablero/PanelDetalle';
 import EditorColumnas from '../components/tablero/EditorColumnas';
 import ActividadGlobal from '../components/tablero/ActividadGlobal';
+import VistaCalendario from '../components/tablero/VistaCalendario';
 
 function nuevoId(prefijo) {
   return `${prefijo}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -28,6 +29,7 @@ export default function TableroPage() {
   const [cargandoTablero, setCargandoTablero] = useState(true);
   const [error, setError] = useState('');
 
+  const [vista, setVista] = useState('lista'); // 'lista' | 'calendario'
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroTab, setFiltroTab] = useState('todos'); // id de pestaña ('todos' | 'revisar' | 'reels' | 'post' | colId:optId) | null
@@ -163,7 +165,11 @@ export default function TableroPage() {
     const itemsEjemplo = [
       item('it_ilce_1', 'gr_agosto_ilce', 'Reel Diego efecto Florida', 0, 'reel', 'listo', 'giuliana@institutoilce.com', 30,
         '<p>En 1996, John Bargh le dio a un grupo de personas una tarea simple: armar oraciones con palabras como "lento", "arrugas", "olvidadizo".</p><p>Después midió cuánto tardaban en caminar por un pasillo.</p><p>Portada: <b>Efecto Florida</b></p>',
-        [{ id: 'f_ilce_1', kind: 'link', name: '8_EFECTO_FLORIDA.mp4 (Drive)', url: 'https://drive.google.com/file/d/1c235L3LB460lF65MZFqCXwl9uU_2bi7F/view' }]
+        [{
+          id: 'f_ilce_1', name: '8_EFECTO_FLORIDA.mp4 (Drive)', mimeType: 'video/mp4',
+          url: 'https://drive.google.com/file/d/1c235L3LB460lF65MZFqCXwl9uU_2bi7F/view',
+          previewUrl: 'https://drive.google.com/file/d/1c235L3LB460lF65MZFqCXwl9uU_2bi7F/preview'
+        }]
       ),
       item('it_ilce_2', 'gr_agosto_ilce', 'Testimonios con diplomas', 1, 'carrusel', 'listo', 'valentina@institutoilce.com', 24,
         '<p>Carrusel con foto de diploma + frase del alumno.</p>', []
@@ -462,6 +468,7 @@ export default function TableroPage() {
   // (Todos / Para revisar / Reels / Post), igual que en el diseño de referencia.
   const columnaTipo = useMemo(() => columnas.find((c) => c.tipo === 'status' && c.id !== columnaEstado?.id && (c.nombre || '').trim().toLowerCase() === 'tipo'), [columnas, columnaEstado]);
   const columnaResponsable = useMemo(() => columnas.find((c) => c.tipo === 'person'), [columnas]);
+  const columnaFecha = useMemo(() => columnas.find((c) => c.tipo === 'date'), [columnas]);
 
   // Un contenido puede tener uno o varios responsables (array de emails); sigue aceptando
   // el formato viejo (un email suelto) para no romper contenidos ya cargados.
@@ -491,16 +498,34 @@ export default function TableroPage() {
     ];
   }, [columnaEstado, columnaTipo]);
 
+  // Búsqueda por nombre "en todo el tablero": no solo el título del contenido, también
+  // el texto de la descripción y de las columnas de texto libre, y el nombre de la
+  // persona responsable — así encuentra algo aunque no recuerdes el título exacto.
+  const columnasTexto = useMemo(() => columnas.filter((c) => c.tipo === 'text'), [columnas]);
+  function coincideBusqueda(it, termino) {
+    const q = termino.toLowerCase();
+    if ((it.nombre || '').toLowerCase().includes(q)) return true;
+    if ((it.body || '').replace(/<[^>]+>/g, ' ').toLowerCase().includes(q)) return true;
+    if (columnasTexto.some((c) => (it.cells?.[c.id] || '').toLowerCase().includes(q))) return true;
+    if (columnaResponsable) {
+      const nombres = responsablesDeItem(it).map((email) => (usuariosEquipo.find((u) => u.email === email)?.nombre || '').toLowerCase());
+      if (nombres.some((n) => n.includes(q))) return true;
+    }
+    return false;
+  }
+
   // Pool base: solo búsqueda + responsable — sirve para calcular los contadores de chips/pestañas.
+  // La búsqueda ignora la pestaña activa (se resetea sola a "Todos" al escribir, ver más
+  // abajo) para que nunca parezca que "no encuentra nada" por un filtro que quedó puesto.
   const poolBase = useMemo(() => items.filter((it) => {
-    if (busqueda && !(it.nombre || '').toLowerCase().includes(busqueda.toLowerCase())) return false;
+    if (busqueda && !coincideBusqueda(it, busqueda)) return false;
     if (filtroResponsables.length && columnaResponsable) {
       const asignados = responsablesDeItem(it);
       const coincide = filtroResponsables.some((f) => (f === '__sin__' ? asignados.length === 0 : asignados.includes(f)));
       if (!coincide) return false;
     }
     return true;
-  }), [items, busqueda, filtroResponsables, columnaResponsable]);
+  }), [items, busqueda, filtroResponsables, columnaResponsable, columnasTexto, usuariosEquipo]);
 
   const poolTrasChip = useMemo(() => poolBase.filter((it) => {
     if (filtroEstado && columnaEstado && it.cells?.[columnaEstado.id] !== filtroEstado) return false;
@@ -516,9 +541,9 @@ export default function TableroPage() {
   // Pools sin el filtro de responsable (pero con búsqueda/estado/pestaña) — para que el
   // contador de cada chip de responsable refleje "si eligiera este, combinado con lo demás".
   const poolBaseSinResponsable = useMemo(() => items.filter((it) => {
-    if (busqueda && !(it.nombre || '').toLowerCase().includes(busqueda.toLowerCase())) return false;
+    if (busqueda && !coincideBusqueda(it, busqueda)) return false;
     return true;
-  }), [items, busqueda]);
+  }), [items, busqueda, columnasTexto, usuariosEquipo]);
 
   const poolTrasChipSinResponsable = useMemo(() => poolBaseSinResponsable.filter((it) => {
     if (filtroEstado && columnaEstado && it.cells?.[columnaEstado.id] !== filtroEstado) return false;
@@ -586,11 +611,26 @@ export default function TableroPage() {
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <input
           value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="🔎 Buscar contenido…"
-          className="bg-surface2 border border-border rounded-lg px-3 py-1.5 text-sm w-56"
+          onChange={(e) => { setBusqueda(e.target.value); if (e.target.value && filtroTab && filtroTab !== 'todos') setFiltroTab('todos'); }}
+          placeholder="🔎 Buscar en todo el tablero (título, texto, responsable)…"
+          className="bg-surface2 border border-border rounded-lg px-3 py-1.5 text-sm w-72"
           data-tour="tablero-buscar"
         />
+        <div className="flex items-center bg-surface2 border border-border rounded-lg p-0.5 text-xs">
+          <button
+            onClick={() => setVista('lista')}
+            className={`px-2.5 py-1 rounded-md font-semibold ${vista === 'lista' ? 'bg-gradient-to-r from-accentPurple to-accentMagenta text-white' : 'text-textSec hover:text-text'}`}
+          >
+            📋 Lista
+          </button>
+          <button
+            onClick={() => setVista('calendario')}
+            className={`px-2.5 py-1 rounded-md font-semibold ${vista === 'calendario' ? 'bg-gradient-to-r from-accentPurple to-accentMagenta text-white' : 'text-textSec hover:text-text'}`}
+          >
+            📅 Calendario
+          </button>
+        </div>
+
         {hayFiltrosActivos && (
           <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroTab('todos'); setFiltroResponsables([]); setBusquedaResponsable(''); }} className="text-xs text-textMuted hover:text-text underline">
             Limpiar filtros
@@ -711,6 +751,14 @@ export default function TableroPage() {
 
       {cargandoTablero ? (
         <p className="text-sm text-textMuted">Cargando tablero…</p>
+      ) : vista === 'calendario' ? (
+        <VistaCalendario
+          items={itemsFiltrados}
+          grupos={gruposOrdenados}
+          columnaFecha={columnaFecha}
+          columnaEstado={columnaEstado}
+          onAbrirItem={setItemSeleccionadoId}
+        />
       ) : (
         <>
           {gruposOrdenados.map((grupo) => (

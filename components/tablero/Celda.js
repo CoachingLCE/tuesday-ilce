@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useSession } from '../../lib/useSession';
 
 function useClickOutside(ref, onOutside) {
   useEffect(() => {
@@ -236,44 +237,77 @@ function CeldaFecha({ columna, valor, onGuardar }) {
   );
 }
 
-function detectarTipoAdjunto(url) {
-  const u = (url || '').toLowerCase().split('?')[0];
-  if (/\.(png|jpe?g|gif|webp|svg)$/.test(u)) return 'image';
-  if (/\.(mp4|webm|mov)$/.test(u)) return 'video';
-  if (/\.pdf$/.test(u)) return 'pdf';
-  return 'link';
+function iconoAdjunto(mimeType) {
+  const m = mimeType || '';
+  if (m.startsWith('image/')) return '🖼️';
+  if (m.startsWith('video/')) return '🎬';
+  if (m === 'application/pdf') return '📄';
+  if (m.includes('spreadsheet') || m.includes('excel')) return '📊';
+  if (m.includes('word') || m.includes('document')) return '📝';
+  if (m.includes('presentation') || m.includes('powerpoint')) return '📽️';
+  return '📎';
 }
 
-function iconoAdjunto(kind) {
-  if (kind === 'video') return '🎬';
-  if (kind === 'pdf') return '📄';
-  return '🔗';
+const LIMITE_MB_ARCHIVO = 4;
+
+function IconoOFoto({ a, className }) {
+  const [fallo, setFallo] = useState(false);
+  if (!fallo && a.thumbUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={a.thumbUrl} alt={a.name} className={className} onError={() => setFallo(true)} />
+    );
+  }
+  return <span className={`${className} flex items-center justify-center`}>{iconoAdjunto(a.mimeType)}</span>;
 }
 
 function CeldaArchivo({ columna, valor, onGuardar }) {
+  const { fetchAutenticado } = useSession();
   const [abierto, setAbierto] = useState(false);
-  const [nombre, setNombre] = useState('');
-  const [url, setUrl] = useState('');
+  const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState('');
   const [lightbox, setLightbox] = useState(null);
   const ref = useRef(null);
+  const inputRef = useRef(null);
   useClickOutside(ref, () => setAbierto(false));
   const archivos = Array.isArray(valor) ? valor : [];
 
-  function agregar(e) {
-    e.preventDefault();
-    if (!nombre.trim() || !url.trim()) return;
-    const nuevo = { id: `f_${Date.now()}`, kind: detectarTipoAdjunto(url.trim()), name: nombre.trim(), url: url.trim() };
-    onGuardar([...archivos, nuevo], `agregó un archivo a ${columna.nombre}: ${nuevo.name}`);
-    setNombre(''); setUrl('');
+  async function subirArchivos(files) {
+    setError('');
+    for (const file of files) {
+      if (file.size > LIMITE_MB_ARCHIVO * 1024 * 1024) {
+        setError(`"${file.name}" pesa más de ${LIMITE_MB_ARCHIVO} MB — por ahora ese es el máximo.`);
+        continue;
+      }
+      setSubiendo(true);
+      try {
+        const formData = new FormData();
+        formData.append('archivo', file);
+        const res = await fetchAutenticado('/api/tablero/archivos', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error || 'No se pudo subir el archivo.'); continue; }
+        onGuardar([...archivos, data.archivo], `agregó un archivo a ${columna.nombre}: ${data.archivo.name}`);
+      } catch {
+        setError('Error de conexión al subir el archivo.');
+      } finally {
+        setSubiendo(false);
+      }
+    }
   }
 
-  function quitar(id) {
-    onGuardar(archivos.filter((a) => a.id !== id), `quitó un archivo de ${columna.nombre}`);
+  function onElegirArchivos(e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length) subirArchivos(files);
   }
 
-  function abrir(a) {
-    if (a.kind === 'link') { window.open(a.url, '_blank', 'noreferrer'); return; }
-    setLightbox(a);
+  async function quitar(a) {
+    onGuardar(archivos.filter((x) => x.id !== a.id), `quitó un archivo de ${columna.nombre}: ${a.name}`);
+    try {
+      await fetchAutenticado(`/api/tablero/archivos?id=${encodeURIComponent(a.id)}`, { method: 'DELETE' });
+    } catch {
+      // Si falla el borrado en Drive no revertimos la celda — ya se sacó de la vista igual.
+    }
   }
 
   return (
@@ -281,57 +315,50 @@ function CeldaArchivo({ columna, valor, onGuardar }) {
       <button onClick={() => setAbierto((v) => !v)} className="w-full h-9 rounded flex items-center gap-1 px-2 hover:bg-surface2 overflow-hidden">
         {archivos.slice(0, 3).map((a) => (
           <span key={a.id} className="w-5 h-5 rounded bg-bg border border-border flex items-center justify-center text-[10px] shrink-0 overflow-hidden">
-            {a.kind === 'image' ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
-            ) : iconoAdjunto(a.kind)}
+            <IconoOFoto a={a} className="w-full h-full object-cover" />
           </span>
         ))}
         {archivos.length > 3 && <span className="text-[10px] text-textMuted">+{archivos.length - 3}</span>}
-        {!archivos.length && <span className="text-textMuted text-xs">+ archivo</span>}
+        {!archivos.length && <span className="text-textMuted text-xs">{subiendo ? 'Subiendo…' : '+ archivo'}</span>}
       </button>
       {abierto && (
-        <div className="absolute z-20 top-full left-0 mt-1 w-56 bg-surface2 border border-border rounded-lg shadow-xl p-2">
+        <div className="absolute z-20 top-full left-0 mt-1 w-64 bg-surface2 border border-border rounded-lg shadow-xl p-2">
           {archivos.length ? (
             <div className="space-y-1 mb-2 max-h-40 overflow-y-auto">
               {archivos.map((a) => (
                 <div key={a.id} className="flex items-center gap-1.5 text-xs">
-                  <button onClick={() => abrir(a)} className="flex-1 flex items-center gap-1.5 text-left truncate hover:underline">
+                  <button onClick={() => setLightbox(a)} className="flex-1 flex items-center gap-1.5 text-left truncate hover:underline">
                     <span className="w-5 h-5 rounded bg-bg border border-border flex items-center justify-center text-[10px] shrink-0 overflow-hidden">
-                      {a.kind === 'image' ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
-                      ) : iconoAdjunto(a.kind)}
+                      <IconoOFoto a={a} className="w-full h-full object-cover" />
                     </span>
                     <span className="truncate">{a.name}</span>
                   </button>
-                  <button onClick={() => quitar(a.id)} className="text-textMuted hover:text-dangerText shrink-0">✕</button>
+                  <button onClick={() => quitar(a)} className="text-textMuted hover:text-dangerText shrink-0">✕</button>
                 </div>
               ))}
             </div>
           ) : <p className="text-xs text-textMuted mb-2">Sin archivos todavía.</p>}
-          <form onSubmit={agregar} className="space-y-1">
-            <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" className="w-full bg-bg border border-border rounded px-2 py-1 text-xs" />
-            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" className="w-full bg-bg border border-border rounded px-2 py-1 text-xs" />
-            <button type="submit" className="w-full bg-accentTeal text-white rounded px-2 py-1 text-xs font-semibold">+ Agregar</button>
-          </form>
+          {error && <p className="text-dangerText text-[10.5px] mb-1.5">{error}</p>}
+          <input ref={inputRef} type="file" multiple onChange={onElegirArchivos} className="hidden" />
+          <button
+            type="button" disabled={subiendo}
+            onClick={() => inputRef.current?.click()}
+            className="w-full bg-accentTeal text-white rounded px-2 py-1 text-xs font-semibold disabled:opacity-50"
+          >
+            {subiendo ? 'Subiendo…' : '+ Subir archivo'}
+          </button>
+          <p className="text-[10px] text-textMuted mt-1 text-center">Máximo {LIMITE_MB_ARCHIVO} MB por archivo</p>
         </div>
       )}
       {lightbox && (
         <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-6" onClick={() => setLightbox(null)}>
           <button onClick={() => setLightbox(null)} className="absolute top-4 right-5 text-white text-2xl leading-none">✕</button>
-          <div onClick={(e) => e.stopPropagation()} className="max-w-[90vw] max-h-[85vh] flex flex-col items-center gap-2">
-            {lightbox.kind === 'image' && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={lightbox.url} alt={lightbox.name} className="max-w-[90vw] max-h-[78vh] rounded-lg object-contain" />
-            )}
-            {lightbox.kind === 'video' && (
-              <video src={lightbox.url} controls autoPlay className="max-w-[90vw] max-h-[78vh] rounded-lg" />
-            )}
-            {lightbox.kind === 'pdf' && (
-              <embed src={lightbox.url} type="application/pdf" className="w-[82vw] h-[78vh] rounded-lg bg-white" />
-            )}
-            <p className="text-white text-xs">{lightbox.name}</p>
+          <div onClick={(e) => e.stopPropagation()} className="w-[85vw] h-[82vh] flex flex-col items-center gap-2">
+            <iframe src={lightbox.previewUrl} className="w-full flex-1 rounded-lg bg-white border-0" allow="autoplay" title={lightbox.name} />
+            <div className="flex items-center gap-3">
+              <p className="text-white text-xs">{lightbox.name}</p>
+              <a href={lightbox.url} target="_blank" rel="noreferrer" className="text-accentTeal text-xs underline">Abrir en una pestaña nueva</a>
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,16 @@
 'use client';
-import { useState } from 'react';
-import { colorSiguiente } from '../../lib/paletaTablero';
+import { useEffect, useRef, useState } from 'react';
+import { colorSiguiente, PALETA_COLORES } from '../../lib/paletaTablero';
+
+function useClickOutside(ref, onOutside) {
+  useEffect(() => {
+    function onClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) onOutside();
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [ref, onOutside]);
+}
 
 const TIPOS = [
   { id: 'status', label: 'Estado' },
@@ -114,19 +124,49 @@ function ColumnaEditable({ columna, onActualizar, onEliminar }) {
         <div className="pl-1">
           <div className="flex flex-wrap gap-1.5 mb-1.5">
             {(columna.opciones || []).map((o) => (
-              <div key={o.id} className="flex items-center gap-1 rounded-lg px-2 py-1" style={{ background: o.color }}>
-                <input
-                  value={o.label}
-                  onChange={(e) => actualizarOpcion(o.id, { label: e.target.value })}
-                  className="bg-transparent text-white text-xs font-medium outline-none w-20"
-                />
-                <button onClick={() => quitarOpcion(o.id)} className="text-white/80 hover:text-white text-xs">✕</button>
-              </div>
+              <OpcionEditable key={o.id} opcion={o} onActualizar={(cambios) => actualizarOpcion(o.id, cambios)} onQuitar={() => quitarOpcion(o.id)} />
             ))}
           </div>
           <button onClick={agregarOpcion} className="text-xs text-accentTeal hover:underline">+ Agregar opción</button>
         </div>
       )}
+    </div>
+  );
+}
+
+function OpcionEditable({ opcion, onActualizar, onQuitar }) {
+  const [colorAbierto, setColorAbierto] = useState(false);
+  const ref = useRef(null);
+  useClickOutside(ref, () => setColorAbierto(false));
+
+  return (
+    <div className="flex items-center gap-1 rounded-lg px-2 py-1" style={{ background: opcion.color }}>
+      <div className="relative" ref={ref}>
+        <button
+          onClick={() => setColorAbierto((v) => !v)}
+          className="w-3.5 h-3.5 rounded-full border border-white/50 shrink-0"
+          style={{ background: opcion.color }}
+          title="Cambiar color"
+        />
+        {colorAbierto && (
+          <div className="absolute z-30 top-full left-0 mt-1 bg-surface2 border border-border rounded-lg shadow-xl p-2 flex flex-wrap gap-1.5 w-32">
+            {PALETA_COLORES.map((c) => (
+              <button
+                key={c}
+                onClick={() => { onActualizar({ color: c }); setColorAbierto(false); }}
+                className="w-5 h-5 rounded-full"
+                style={{ background: c }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      <input
+        value={opcion.label}
+        onChange={(e) => onActualizar({ label: e.target.value })}
+        className="bg-transparent text-white text-xs font-medium outline-none w-20"
+      />
+      <button onClick={onQuitar} className="text-white/80 hover:text-white text-xs">✕</button>
     </div>
   );
 }
