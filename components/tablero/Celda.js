@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSession } from '../../lib/useSession';
+import { PALETA_COLORES, colorSiguiente } from '../../lib/paletaTablero';
 
 function useClickOutside(ref, onOutside) {
   useEffect(() => {
@@ -17,9 +18,13 @@ function useClickOutside(ref, onOutside) {
 // SIEMPRE por encima de todo, sin que otras filas de la tabla lo tapen ni el scroll
 // horizontal lo recorte. Antes se dibujaba "adentro" de la celda con position: absolute,
 // y en tableros con varias filas quedaba tapado por las filas siguientes.
-function CeldaEstado({ columna, valor, onGuardar }) {
+function CeldaEstado({ columna, valor, onGuardar, puedeEditarEstructura, onAgregarOpcion }) {
   const [abierto, setAbierto] = useState(false);
   const [posicion, setPosicion] = useState(null);
+  const [formularioAbierto, setFormularioAbierto] = useState(false);
+  const [nombreNuevo, setNombreNuevo] = useState('');
+  const [colorNuevo, setColorNuevo] = useState(null);
+  const [creando, setCreando] = useState(false);
   const triggerRef = useRef(null);
   const popoverRef = useRef(null);
   const opcion = (columna.opciones || []).find((o) => o.id === valor);
@@ -48,7 +53,31 @@ function CeldaEstado({ columna, valor, onGuardar }) {
   function abrir() {
     const r = triggerRef.current.getBoundingClientRect();
     setPosicion({ top: r.bottom + 4, left: r.left });
+    setFormularioAbierto(false);
     setAbierto(true);
+  }
+
+  function abrirFormulario() {
+    setColorNuevo(colorSiguiente((columna.opciones || []).map((o) => o.color)));
+    setNombreNuevo('');
+    setFormularioAbierto(true);
+  }
+
+  // Crea la opción nueva (con su color) en la columna Y de una la deja asignada en esta
+  // celda — antes solo se podía agregar una opción entrando al editor de columnas aparte.
+  async function crearOpcion(e) {
+    e.preventDefault();
+    if (!nombreNuevo.trim() || creando) return;
+    setCreando(true);
+    try {
+      const usados = (columna.opciones || []).map((o) => o.color);
+      const nueva = { id: `op_${Date.now()}`, label: nombreNuevo.trim(), color: colorNuevo || colorSiguiente(usados) };
+      await onAgregarOpcion(nueva);
+      onGuardar(nueva.id, `cambió ${columna.nombre} a "${nueva.label}"`);
+      setAbierto(false);
+    } finally {
+      setCreando(false);
+    }
   }
 
   return (
@@ -85,6 +114,40 @@ function CeldaEstado({ columna, valor, onGuardar }) {
             <button onClick={() => { onGuardar('', `quitó ${columna.nombre}`); setAbierto(false); }} className="w-full text-left text-xs text-textMuted px-2 py-1.5 border-t border-border mt-1 pt-1.5">
               Limpiar
             </button>
+          )}
+          {puedeEditarEstructura && onAgregarOpcion && (
+            formularioAbierto ? (
+              <form onSubmit={crearOpcion} className="border-t border-border mt-1 pt-1.5 space-y-1.5">
+                <input
+                  autoFocus value={nombreNuevo} onChange={(e) => setNombreNuevo(e.target.value)}
+                  placeholder="Nombre de la opción"
+                  className="w-full bg-bg border border-border rounded px-2 py-1 text-xs outline-none"
+                />
+                <div className="flex flex-wrap gap-1.5 px-0.5">
+                  {PALETA_COLORES.map((c) => (
+                    <button
+                      key={c} type="button" onClick={() => setColorNuevo(c)}
+                      className={`w-5 h-5 rounded-full ${colorNuevo === c ? 'ring-2 ring-white' : ''}`}
+                      style={{ background: c }}
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-1">
+                  <button type="submit" disabled={creando || !nombreNuevo.trim()} className="flex-1 bg-accentTeal text-white rounded px-2 py-1 text-[11px] font-semibold disabled:opacity-50">
+                    {creando ? 'Creando…' : 'Crear y asignar'}
+                  </button>
+                  <button type="button" onClick={() => setFormularioAbierto(false)} className="text-[11px] text-textMuted px-2">Cancelar</button>
+                </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={abrirFormulario}
+                className="w-full text-left text-xs text-accentTeal px-2 py-1.5 border-t border-border mt-1 pt-1.5 hover:underline"
+              >
+                + Nueva opción (nombre y color)
+              </button>
+            )
           )}
         </div>,
         document.body
@@ -513,8 +576,10 @@ function CeldaTexto({ columna, valor, onGuardar }) {
   );
 }
 
-export default function Celda({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPersonas, onCrearPersona }) {
-  if (columna.tipo === 'status') return <CeldaEstado columna={columna} valor={valor} onGuardar={onGuardar} />;
+export default function Celda({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPersonas, onCrearPersona, onAgregarOpcion }) {
+  if (columna.tipo === 'status') return (
+    <CeldaEstado columna={columna} valor={valor} onGuardar={onGuardar} puedeEditarEstructura={puedeCrearPersonas} onAgregarOpcion={onAgregarOpcion ? (nueva) => onAgregarOpcion(columna.id, nueva) : undefined} />
+  );
   if (columna.tipo === 'person') return (
     <CeldaPersona
       columna={columna} valor={valor} usuariosEquipo={usuariosEquipo || []} onGuardar={onGuardar}

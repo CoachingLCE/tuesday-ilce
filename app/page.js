@@ -78,8 +78,6 @@ export default function TableroPage() {
   const [mostrarActividadGlobal, setMostrarActividadGlobal] = useState(false);
   const [vistasActividad, setVistasActividad] = useState({});
 
-  const [cargandoEjemplo, setCargandoEjemplo] = useState(false);
-
   const puedeEditarEstructura = tienePermisoEditarEstructura(usuario);
   const puedeReordenarGrupos = tienePermisoReordenarGrupos(usuario);
   const [grupoArrastradoId, setGrupoArrastradoId] = useState(null);
@@ -126,125 +124,10 @@ export default function TableroPage() {
       setItems(dataTablero.items || []);
       setUsuariosEquipo(dataUsuarios.usuarios || []);
       setActividadGlobal(dataActividad.actividad || []);
-
-      // Tablero recién creado (sin columnas ni grupos): se carga un ejemplo armado para
-      // que se vea y se pueda probar de entrada, en vez de una pantalla vacía. Solo pasa
-      // una vez — apenas exista una columna o un grupo, esto no se vuelve a disparar.
-      if (!(dataTablero.grupos || []).length && !(dataTablero.columnas || []).length) {
-        await sembrarTableroDeEjemplo();
-      }
     } catch {
       setError('Error de conexión.');
     } finally {
       setCargandoTablero(false);
-    }
-  }
-
-  // Carga el mismo calendario de contenidos de ejemplo que se usó para probar el diseño
-  // (columnas, grupos y 7 contenidos), con las mismas personas/colores/fechas relativas.
-  async function sembrarTableroDeEjemplo() {
-    const colTipo = {
-      id: 'col_tipo_ilce', nombre: 'Tipo', tipo: 'status', orden: 0,
-      opciones: [
-        { id: 'reel', label: 'Reel', color: '#4c6fff' },
-        { id: 'carrusel', label: 'Carrusel', color: '#a25ddc' },
-        { id: 'story', label: 'Story', color: '#00c2ce' },
-        { id: 'post', label: 'Post', color: '#ffcb00' },
-        { id: 'video', label: 'Video', color: '#e2445c' },
-        { id: 'otro', label: 'Otro', color: '#808094' }
-      ]
-    };
-    const colEstado = {
-      id: 'col_estado_ilce', nombre: 'Estado', tipo: 'status', orden: 1,
-      opciones: [
-        { id: 'hacer', label: 'Hacer', color: '#808094' },
-        { id: 'proceso', label: 'En proceso', color: '#fdab3d' },
-        { id: 'pausado', label: 'Pausado', color: '#e2445c' },
-        { id: 'corregir', label: 'Corregir', color: '#a25ddc' },
-        { id: 'subir', label: 'Subir', color: '#4c6fff' },
-        { id: 'listo', label: 'Listo', color: '#00c875' }
-      ]
-    };
-    const colResponsable = { id: 'col_responsable_ilce', nombre: 'Responsable', tipo: 'person', orden: 2, opciones: [] };
-    const colFecha = { id: 'col_fecha_ilce', nombre: 'Fecha', tipo: 'date', orden: 3, opciones: [] };
-    const colArchivos = { id: 'col_archivos_ilce', nombre: 'Archivos', tipo: 'file', orden: 4, opciones: [] };
-
-    await crearColumna(colTipo);
-    await crearColumna(colEstado);
-    await crearColumna(colResponsable);
-    await crearColumna(colFecha);
-    await crearColumna(colArchivos);
-
-    await guardarGrupoNuevo({ id: 'gr_septiembre_ilce', nombre: 'Septiembre', color: '#e2445c', orden: 0 });
-    await guardarGrupoNuevo({ id: 'gr_agosto_ilce', nombre: 'Agosto', color: '#5b5fef', orden: 1 });
-
-    // Las 4 personas de ejemplo tienen que existir como Usuarios reales (con email) para
-    // que el selector de Responsable las pueda mostrar — se crean si todavía no están.
-    const personasEjemplo = [
-      { nombre: 'Jenn', email: 'jennifer.rebasti@institutoilce.com' },
-      { nombre: 'Giuli', email: 'giuliana@institutoilce.com' },
-      { nombre: 'Valu', email: 'valentina@institutoilce.com' },
-      { nombre: 'Diego', email: 'diego@institutoilce.com' }
-    ];
-    for (const p of personasEjemplo) {
-      const yaExiste = usuariosEquipo.some((u) => u.email.toLowerCase() === p.email.toLowerCase());
-      if (!yaExiste) {
-        // eslint-disable-next-line no-await-in-loop
-        await crearPersona(p.nombre, p.email);
-      }
-    }
-
-    const ahora = Date.now();
-    const dia = 86400000;
-    const fechaHaceDias = (dias) => new Date(ahora - dias * dia).toISOString().slice(0, 10);
-
-    const item = (id, grupoId, nombre, orden, tipo, estado, responsable, offsetDias, body, archivos) => ({
-      id, grupoId, nombre, orden,
-      cells: {
-        [colTipo.id]: tipo, [colEstado.id]: estado, [colResponsable.id]: responsable,
-        [colFecha.id]: fechaHaceDias(offsetDias), [colArchivos.id]: archivos || []
-      },
-      body: body || '', creadoPor: 'Ejemplo', creadoEn: new Date().toISOString()
-    });
-
-    const itemsEjemplo = [
-      item('it_ilce_1', 'gr_agosto_ilce', 'Reel Diego efecto Florida', 0, 'reel', 'listo', 'giuliana@institutoilce.com', 30,
-        '<p>En 1996, John Bargh le dio a un grupo de personas una tarea simple: armar oraciones con palabras como "lento", "arrugas", "olvidadizo".</p><p>Después midió cuánto tardaban en caminar por un pasillo.</p><p>Portada: <b>Efecto Florida</b></p>',
-        [{
-          id: 'f_ilce_1', name: '8_EFECTO_FLORIDA.mp4 (Drive)', mimeType: 'video/mp4',
-          url: 'https://drive.google.com/file/d/1c235L3LB460lF65MZFqCXwl9uU_2bi7F/view',
-          previewUrl: 'https://drive.google.com/file/d/1c235L3LB460lF65MZFqCXwl9uU_2bi7F/preview'
-        }]
-      ),
-      item('it_ilce_2', 'gr_agosto_ilce', 'Testimonios con diplomas', 1, 'carrusel', 'listo', 'valentina@institutoilce.com', 24,
-        '<p>Carrusel con foto de diploma + frase del alumno.</p>', []
-      ),
-      item('it_ilce_3', 'gr_agosto_ilce', 'ST ebook ontológico', 2, 'post', 'proceso', 'jennifer.rebasti@institutoilce.com', 5, '', []),
-      item('it_ilce_4', 'gr_agosto_ilce', 'Nunca creí en el coaching', 3, 'video', 'listo', 'valentina@institutoilce.com', 20,
-        '<p>Testimonio en cámara, edición dinámica con subtítulos grandes.</p>', []
-      ),
-      item('it_ilce_5', 'gr_agosto_ilce', 'Lanzamiento coaching inmobiliario reel', 4, 'reel', 'listo', 'diego@institutoilce.com', 35, '', []),
-      item('it_ilce_6', 'gr_septiembre_ilce', 'Ebook deportivo', 0, 'post', 'corregir', 'jennifer.rebasti@institutoilce.com', -2, '', []),
-      item('it_ilce_7', 'gr_septiembre_ilce', 'Invitación docentes casos reales', 1, 'story', 'hacer', 'giuliana@institutoilce.com', -4, '', [])
-    ];
-    for (const it of itemsEjemplo) {
-      // eslint-disable-next-line no-await-in-loop
-      await guardarItemNuevo(it);
-    }
-  }
-
-  // El ejemplo automático (arriba) solo se dispara con el tablero totalmente vacío. Este
-  // botón hace lo mismo a demanda, sin borrar nada de lo que ya haya cargado — para
-  // tableros que ya tienen columnas o grupos propios y quieren sumar igual el ejemplo.
-  const ejemploYaCargado = columnas.some((c) => c.id === 'col_estado_ilce');
-  async function cargarEjemploManual() {
-    if (ejemploYaCargado || cargandoEjemplo) return;
-    if (!window.confirm('Esto agrega el calendario de contenidos de ejemplo (5 columnas, 2 grupos "Septiembre"/"Agosto" y 7 contenidos) sin borrar nada de lo que ya tenés cargado. ¿Continuar?')) return;
-    setCargandoEjemplo(true);
-    try {
-      await sembrarTableroDeEjemplo();
-    } finally {
-      setCargandoEjemplo(false);
     }
   }
 
@@ -468,6 +351,14 @@ export default function TableroPage() {
     } catch {
       setError('No se pudo crear la columna. Refrescá la página.');
     }
+  }
+
+  // Crea una opción nueva (nombre + color) para una columna de tipo Estado, sin salir del
+  // desplegable rápido de la celda — antes esto solo se podía hacer desde "⚙️ Columnas".
+  async function agregarOpcionColumna(columnaId, nuevaOpcion) {
+    const columna = columnas.find((c) => c.id === columnaId);
+    const opciones = [...(columna?.opciones || []), nuevaOpcion];
+    await actualizarColumna(columnaId, { opciones });
   }
 
   async function actualizarColumna(id, cambios) {
@@ -705,16 +596,6 @@ export default function TableroPage() {
             Limpiar filtros
           </button>
         )}
-        {puedeEditarEstructura && !ejemploYaCargado && (
-          <button
-            onClick={cargarEjemploManual}
-            disabled={cargandoEjemplo}
-            className="text-xs text-accentTeal hover:underline disabled:opacity-50"
-            title="Agrega columnas, grupos y contenidos de ejemplo sin borrar lo que ya tenés"
-          >
-            {cargandoEjemplo ? 'Cargando ejemplo…' : '🧪 Cargar contenido de ejemplo'}
-          </button>
-        )}
 
         <div className="flex items-center gap-3 ml-auto">
           <div className="text-xs text-textMuted" title={ultimoGuardado ? `Guardado a las ${horaCorta(ultimoGuardado)}` : ''}>
@@ -848,6 +729,7 @@ export default function TableroPage() {
               onEliminarItem={eliminarItemConfirmado}
               onAbrirEditorColumnas={() => setEditandoColumnas(true)}
               onCrearPersona={crearPersona}
+              onAgregarOpcion={agregarOpcionColumna}
               puedeReordenarGrupos={puedeReordenarGrupos}
               arrastrando={grupoArrastradoId === grupo.id}
               hayArrastreActivo={!!grupoArrastradoId}
@@ -890,6 +772,7 @@ export default function TableroPage() {
           onEliminarItem={eliminarItem}
           puedeCrearPersonas={puedeEditarEstructura}
           onCrearPersona={crearPersona}
+          onAgregarOpcion={agregarOpcionColumna}
         />
       )}
 

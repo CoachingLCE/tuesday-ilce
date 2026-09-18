@@ -44,7 +44,7 @@ function formatearFecha(iso) {
 
 export default function PanelDetalle({
   item, columnas, usuariosEquipo, grupos, fetchAutenticado, usuario,
-  onCerrar, onActualizarItem, onEliminarItem, puedeCrearPersonas, onCrearPersona
+  onCerrar, onActualizarItem, onEliminarItem, puedeCrearPersonas, onCrearPersona, onAgregarOpcion
 }) {
   const [nombre, setNombre] = useState(item.nombre || '');
   const [comentarios, setComentarios] = useState([]);
@@ -302,6 +302,7 @@ export default function PanelDetalle({
                   columna={c} valor={item.cells?.[c.id]} usuariosEquipo={usuariosEquipo}
                   onGuardar={(v, txt) => actualizarCelda(c, v, txt)}
                   puedeCrearPersonas={puedeCrearPersonas} onCrearPersona={onCrearPersona}
+                  onAgregarOpcion={onAgregarOpcion}
                 />
               </div>
             ))}
@@ -323,7 +324,7 @@ export default function PanelDetalle({
               onClick={onClickBody}
               onInput={onInputBody}
               onKeyUp={onInputBody}
-              className="min-h-[100px] bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accentTeal [&_a]:text-accentTeal [&_a]:underline"
+              className="min-h-[100px] bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accentTeal [&_a]:text-accentTeal [&_a]:underline [&_a]:cursor-pointer"
               data-tour="tablero-descripcion"
             />
             <p className="text-[10px] text-textMuted mt-1">Usá @ para mencionar a alguien del equipo y avisarle.</p>

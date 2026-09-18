@@ -72,24 +72,70 @@ En el proyecto de Vercel → Settings → Environment Variables (marcando Produc
 | `SESSION_SECRET` | Cualquier string largo y random, propio de esta app |
 | `SETUP_BOOTSTRAP_KEY` | Cualquier string largo y random — se usa una sola vez por persona para poner su primera contraseña, después no hace falta más |
 
-| `GOOGLE_DRIVE_FOLDER_ID` | El ID de una carpeta de Google Drive (ver punto 2.1 más abajo) — es donde se guardan de verdad los archivos que se suben desde la columna "Archivos" |
+| `GOOGLE_DRIVE_FOLDER_ID` | Solo si usás la opción A de Drive (Workspace) — ver punto 2.1 |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN` | Solo si usás la opción B de Drive (cuenta personal, sin Workspace) — ver punto 2.1 |
 
 No hacen falta (todavía) `GMAIL_USER`, `GMAIL_APP_PASSWORD` ni `CRON_SECRET` — no hay ninguna función de mail ni de tareas programadas en esta primera versión.
 
 ### 2.1) Carpeta de Drive para los archivos subidos
 
-Como Google Sheets no puede guardar archivos, los adjuntos que subís desde la columna "Archivos" se guardan en una carpeta de Google Drive.
+Como Google Sheets no puede guardar archivos, los adjuntos que subís desde la columna "Archivos" se guardan en Google Drive. Hay dos formas de configurarlo — usá la que corresponda a tu cuenta:
 
-**Importante — tiene que ser una carpeta dentro de una Unidad compartida (Shared Drive), no una carpeta común de "Mi unidad":** la cuenta de servicio (`carga-clases-bot@...`) no es una persona con una cuenta de Google Workspace, así que no tiene almacenamiento propio. Si le pedís que suba un archivo a una carpeta común, Google devuelve el error *"Service Accounts do not have storage quota"* — es justo lo que pasó al principio. Una Unidad compartida es distinta: el almacenamiento es de la unidad (lo paga la organización), no de cada persona o cuenta que tiene acceso, así que ahí sí puede subir archivos sin problema.
+- **Tenés Google Workspace** (cuenta paga, de organización): opción A, más abajo.
+- **Tenés una cuenta de Gmail normal y gratuita** (no Workspace): opción B. Las Unidades compartidas de la opción A son una función exclusiva de Workspace — una cuenta gratuita no puede crearlas.
+
+No hace falta elegir las dos: si configurás las variables `GOOGLE_OAUTH_...` de la opción B, la app las usa automáticamente y ya no le presta atención a `GOOGLE_DRIVE_FOLDER_ID`.
+
+#### Opción A — con Google Workspace (Unidad compartida)
+
+La cuenta de servicio (`carga-clases-bot@...`) no es una persona con una cuenta de Google, así que no tiene almacenamiento propio. Si le pedís que suba un archivo a una carpeta común, Google devuelve el error *"Service Accounts do not have storage quota"*. Una Unidad compartida es distinta: el almacenamiento es de la unidad (lo paga la organización), así que ahí sí puede subir archivos sin problema.
 
 1. En Google Drive, creá una **Unidad compartida** nueva (no una carpeta común) — botón "Unidades compartidas" en el menú de la izquierda → "Nueva". Nombrala, por ejemplo, "Tuesday ILCE".
-   - Hace falta un plan de Google Workspace que incluya Unidades compartidas (los planes de negocio/organización lo incluyen; una cuenta de Gmail personal gratuita no puede crear una).
 2. Agregá a la cuenta de servicio como miembro de esa Unidad compartida, con permiso **Gestor de contenido** (Content Manager) o superior:
    ```
    carga-clases-bot@carga-clases-ilce.iam.gserviceaccount.com
    ```
 3. Adentro de la Unidad compartida, podés crear una subcarpeta si querés (por ejemplo "Archivos") o usar la unidad directamente. Sacá el ID de esa carpeta (o de la unidad) de su URL (`https://drive.google.com/drive/folders/EL_ID_VA_ACA`) y cargalo como `GOOGLE_DRIVE_FOLDER_ID` en Vercel.
-4. Si ya habías creado una carpeta común (no compartida) antes de saber esto, no hace falta borrar nada: simplemente creá la Unidad compartida como se explica arriba y actualizá `GOOGLE_DRIVE_FOLDER_ID` en Vercel para que apunte a la carpeta nueva. Los archivos que ya se hayan subido antes del cambio no se mueven solos, pero los nuevos van a la carpeta correcta.
+
+#### Opción B — con una cuenta de Google personal (sin Workspace)
+
+Acá la app sube los archivos "como si fuera" tu propia cuenta de Google (usando OAuth, el mismo mecanismo de "Iniciar sesión con Google" de cualquier app), así que cuentan contra tu almacenamiento normal (los 15 GB gratis, o lo que tengas). No hace falta Unidad compartida ni indicar una carpeta: la app crea sola una carpeta llamada "Tuesday ILCE - Archivos" en tu Drive la primera vez que se usa.
+
+Es una configuración de una sola vez, en dos partes: crear las credenciales en Google Cloud, y autorizar tu cuenta.
+
+**1) Crear las credenciales (Google Cloud Console)**
+
+1. Andá a [console.cloud.google.com](https://console.cloud.google.com), con cualquier cuenta de Google (no hace falta Workspace). Creá un proyecto nuevo si no tenés uno (arriba a la izquierda, selector de proyecto → "Proyecto nuevo") — el nombre no importa, por ejemplo "Tuesday ILCE".
+2. Menú ☰ → "APIs y servicios" → "Biblioteca". Buscá "Google Drive API" y hacé clic en "Habilitar".
+3. Menú ☰ → "APIs y servicios" → "Pantalla de consentimiento de OAuth". Elegí **Externo** → Crear. Completá solo lo obligatorio (nombre de la app, tu email en "Correo electrónico de asistencia al usuario" y en "Datos de contacto del desarrollador") → Guardar y continuar en cada paso, sin agregar scopes especiales. En la pantalla de "Usuarios de prueba", agregá tu propio email (el de la cuenta que va a guardar los archivos) → Guardar. **No hace falta publicarla ni pedirle verificación a Google.**
+4. Menú ☰ → "APIs y servicios" → "Credenciales" → "+ Crear credenciales" → "ID de cliente de OAuth". Tipo de aplicación: **Aplicación web**. En "URIs de redireccionamiento autorizados" agregá:
+   ```
+   https://TU-DOMINIO-DE-VERCEL/api/drive-auth/callback
+   ```
+   (reemplazá `TU-DOMINIO-DE-VERCEL` por el dominio real de tu proyecto en Vercel). Creá.
+5. Te va a mostrar un **Client ID** y un **Client secret** — copialos.
+
+**2) Cargar variables y autorizar tu cuenta**
+
+1. En Vercel, agregá estas dos variables (Settings → Environment Variables) y desplegá:
+   | Variable | Valor |
+   |---|---|
+   | `GOOGLE_OAUTH_CLIENT_ID` | El "Client ID" del paso anterior |
+   | `GOOGLE_OAUTH_CLIENT_SECRET` | El "Client secret" del paso anterior |
+2. Ya desplegado, abrí en el navegador (reemplazando ambas partes):
+   ```
+   https://TU-DOMINIO-DE-VERCEL/api/drive-auth/iniciar?clave=TU_SETUP_BOOTSTRAP_KEY
+   ```
+3. Te va a llevar a elegir tu cuenta de Google y aceptar el permiso. Como la app está "sin verificar" por Google, va a mostrar una pantalla de advertencia — hacé clic en "Avanzado" (o "Configuración avanzada") → "Ir a [nombre de tu app] (no seguro)". Es tu propia app, hecha por vos, así que es seguro continuar.
+4. Al aceptar, te va a mostrar un texto largo (el "refresh token"). Copialo y cargalo en Vercel como una tercera variable:
+   | Variable | Valor |
+   |---|---|
+   | `GOOGLE_OAUTH_REFRESH_TOKEN` | El texto que te mostró la página |
+5. Desplegá una vez más. Listo — ya podés subir archivos, y quedan guardados en tu propio Drive, dentro de la carpeta "Tuesday ILCE - Archivos" que la app crea sola.
+
+Si en algún momento este permiso deja de funcionar (por ejemplo, si lo revocás desde [myaccount.google.com/permissions](https://myaccount.google.com/permissions)), solo hay que repetir el paso 2 de autorización — las credenciales del paso 1 siguen sirviendo.
+
+---
 
 Cada archivo que se sube queda visible para "cualquiera con el link" (de solo lectura) — es necesario para que se pueda ver la miniatura y la vista previa dentro del tablero sin pedir que cada persona inicie sesión con Google. El límite actual es **4 MB por archivo** (es el límite que impone Vercel al tamaño de una request, no algo que podamos subir desde acá).
 

@@ -8,7 +8,7 @@ export default function GrupoTabla({
   grupo, columnas, items, usuariosEquipo, puedeEditarEstructura,
   onRenombrarGrupo, onRecolorearGrupo, onEliminarGrupo,
   onCrearItem, onActualizarCelda, onAbrirItem, onMoverItem, onEliminarItem, onAbrirEditorColumnas,
-  onCrearPersona, puedeReordenarGrupos, arrastrando, hayArrastreActivo, sobreDestino, recienMovido,
+  onCrearPersona, onAgregarOpcion, puedeReordenarGrupos, arrastrando, hayArrastreActivo, sobreDestino, recienMovido,
   onIniciarArrastre, onTerminarArrastre, onSobreDestino, onSalirDestino, onSoltarSobre
 }) {
   const [colapsado, setColapsado] = useState(false);
@@ -188,6 +188,7 @@ export default function GrupoTabla({
                           columna={c} valor={item.cells?.[c.id]} usuariosEquipo={usuariosEquipo}
                           onGuardar={(v, txt) => onActualizarCelda(item, c, v, txt)}
                           puedeCrearPersonas={puedeEditarEstructura} onCrearPersona={onCrearPersona}
+                          onAgregarOpcion={onAgregarOpcion}
                         />
                       </td>
                     ))}
