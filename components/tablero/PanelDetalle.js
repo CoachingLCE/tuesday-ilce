@@ -52,6 +52,7 @@ export default function PanelDetalle({
   const [nuevoComentario, setNuevoComentario] = useState('');
   const [mentionAbierto, setMentionAbierto] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionPos, setMentionPos] = useState(null);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [mostrarActividad, setMostrarActividad] = useState(false);
   const [actividad, setActividad] = useState([]);
@@ -128,6 +129,16 @@ export default function PanelDetalle({
       e.preventDefault();
       const url = texto.trim();
       document.execCommand('insertHTML', false, `<a href="${url}" target="_blank" rel="noreferrer" class="text-accentTeal underline">${url}</a>`);
+    }
+  }
+
+  // Un click normal en un link dentro de un contentEditable NO lo abre por defecto (el
+  // navegador asume que querés editar el texto, no navegar) — así que lo abrimos a mano.
+  function onClickBody(e) {
+    const link = e.target.closest?.('a');
+    if (link && bodyRef.current?.contains(link)) {
+      e.preventDefault();
+      window.open(link.href, '_blank', 'noopener,noreferrer');
     }
   }
 
@@ -211,7 +222,12 @@ export default function PanelDetalle({
     const cursor = e.target.selectionStart;
     const hastaCursor = val.slice(0, cursor);
     const match = hastaCursor.match(/@([a-zA-ZÀ-ÿ0-9]*)$/);
-    if (match) { setMentionQuery(match[1].toLowerCase()); setMentionAbierto(true); }
+    if (match) {
+      setMentionQuery(match[1].toLowerCase());
+      const r = e.target.getBoundingClientRect();
+      setMentionPos({ bottom: window.innerHeight - r.top + 4, left: r.left });
+      setMentionAbierto(true);
+    }
     else setMentionAbierto(false);
   }
 
@@ -304,6 +320,7 @@ export default function PanelDetalle({
               suppressContentEditableWarning
               onBlur={guardarBody}
               onPaste={onPasteBody}
+              onClick={onClickBody}
               onInput={onInputBody}
               onKeyUp={onInputBody}
               className="min-h-[100px] bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accentTeal [&_a]:text-accentTeal [&_a]:underline"
@@ -359,14 +376,18 @@ export default function PanelDetalle({
                 className="w-full bg-bg border border-border rounded-lg px-2.5 py-2 text-xs outline-none focus:border-accentTeal resize-none"
                 data-tour="tablero-comentarios"
               />
-              {mentionAbierto && sugeridos.length > 0 && (
-                <div className="absolute bottom-full left-0 mb-1 w-52 bg-surface2 border border-border rounded-lg shadow-xl p-1 z-10">
+              {mentionAbierto && sugeridos.length > 0 && mentionPos && typeof document !== 'undefined' && createPortal(
+                <div
+                  style={{ position: 'fixed', bottom: mentionPos.bottom, left: mentionPos.left, zIndex: 100 }}
+                  className="w-52 bg-surface2 border border-border rounded-lg shadow-xl p-1"
+                >
                   {sugeridos.map((u) => (
-                    <button key={u.email} type="button" onClick={() => elegirMention(u.nombre)} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-bg">
+                    <button key={u.email} type="button" onMouseDown={(e) => { e.preventDefault(); elegirMention(u.nombre); }} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-bg">
                       {u.nombre}
                     </button>
                   ))}
-                </div>
+                </div>,
+                document.body
               )}
               <div className="flex justify-end mt-1.5">
                 <button type="submit" disabled={enviandoComentario || !nuevoComentario.trim()} className="bg-gradient-to-r from-accentPurple to-accentMagenta text-white rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-40">

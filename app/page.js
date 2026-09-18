@@ -83,6 +83,11 @@ export default function TableroPage() {
   const puedeEditarEstructura = tienePermisoEditarEstructura(usuario);
   const puedeReordenarGrupos = tienePermisoReordenarGrupos(usuario);
   const [grupoArrastradoId, setGrupoArrastradoId] = useState(null);
+  // Sobre qué grupo está pasando el que se está arrastrando ahora mismo (para dibujar la
+  // línea de "acá se va a insertar"), y cuál fue el último que se movió (para el resalte
+  // breve que confirma que el reordenamiento pasó de verdad).
+  const [grupoSobreId, setGrupoSobreId] = useState(null);
+  const [grupoRecienMovidoId, setGrupoRecienMovidoId] = useState(null);
 
   useEffect(() => {
     if (!cargando && !usuario) router.push('/login');
@@ -320,7 +325,12 @@ export default function TableroPage() {
   function soltarGrupoSobre(grupoDestinoId) {
     const origenId = grupoArrastradoId;
     setGrupoArrastradoId(null);
+    setGrupoSobreId(null);
     if (!origenId || origenId === grupoDestinoId) return;
+    // Resalte breve sobre el grupo que se acaba de mover, para que se note bien dónde
+    // quedó — la animación sola (que ya movía la fila) no era suficiente señal.
+    setGrupoRecienMovidoId(origenId);
+    setTimeout(() => setGrupoRecienMovidoId((v) => (v === origenId ? null : v)), 1200);
     const ordenActual = [...grupos].sort((a, b) => a.orden - b.orden);
     const idxOrigen = ordenActual.findIndex((g) => g.id === origenId);
     const idxDestino = ordenActual.findIndex((g) => g.id === grupoDestinoId);
@@ -680,6 +690,16 @@ export default function TableroPage() {
           </button>
         </div>
 
+        {puedeEditarEstructura && (
+          <button
+            onClick={() => setEditandoColumnas(true)}
+            className="text-xs px-2.5 py-1.5 rounded-lg border border-border bg-surface2 text-textSec hover:border-accentTeal hover:text-text font-medium"
+            title="Agregar, renombrar, cambiarle el color a las opciones, o borrar una columna"
+          >
+            ⚙️ Columnas
+          </button>
+        )}
+
         {hayFiltrosActivos && (
           <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroTab('todos'); setFiltroResponsables([]); setBusquedaResponsable(''); }} className="text-xs text-textMuted hover:text-text underline">
             Limpiar filtros
@@ -830,8 +850,13 @@ export default function TableroPage() {
               onCrearPersona={crearPersona}
               puedeReordenarGrupos={puedeReordenarGrupos}
               arrastrando={grupoArrastradoId === grupo.id}
+              hayArrastreActivo={!!grupoArrastradoId}
+              sobreDestino={grupoSobreId === grupo.id && grupoArrastradoId !== grupo.id}
+              recienMovido={grupoRecienMovidoId === grupo.id}
               onIniciarArrastre={() => setGrupoArrastradoId(grupo.id)}
-              onTerminarArrastre={() => setGrupoArrastradoId(null)}
+              onTerminarArrastre={() => { setGrupoArrastradoId(null); setGrupoSobreId(null); }}
+              onSobreDestino={() => setGrupoSobreId(grupo.id)}
+              onSalirDestino={() => setGrupoSobreId((v) => (v === grupo.id ? null : v))}
               onSoltarSobre={(e) => { e.preventDefault(); soltarGrupoSobre(grupo.id); }}
             />
           ))}

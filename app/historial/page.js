@@ -112,11 +112,11 @@ export default function AuditoriaPage() {
             </div>
             <div>
               <label className="text-xs text-textSec block mb-1">Desde</label>
-              <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className={inputFechaCls} />
+              <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} onClick={(e) => e.target.showPicker?.()} className={inputFechaCls} />
             </div>
             <div>
               <label className="text-xs text-textSec block mb-1">Hasta</label>
-              <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className={inputFechaCls} />
+              <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} onClick={(e) => e.target.showPicker?.()} className={inputFechaCls} />
             </div>
             <div>
               <label className="text-xs text-textSec block mb-1">Buscar</label>

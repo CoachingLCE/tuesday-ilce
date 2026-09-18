@@ -13,16 +13,48 @@ function useClickOutside(ref, onOutside) {
   }, [ref, onOutside]);
 }
 
+// El menú se dibuja con un portal directo a <body> (igual que CeldaPersona) — así queda
+// SIEMPRE por encima de todo, sin que otras filas de la tabla lo tapen ni el scroll
+// horizontal lo recorte. Antes se dibujaba "adentro" de la celda con position: absolute,
+// y en tableros con varias filas quedaba tapado por las filas siguientes.
 function CeldaEstado({ columna, valor, onGuardar }) {
   const [abierto, setAbierto] = useState(false);
-  const ref = useRef(null);
-  useClickOutside(ref, () => setAbierto(false));
+  const [posicion, setPosicion] = useState(null);
+  const triggerRef = useRef(null);
+  const popoverRef = useRef(null);
   const opcion = (columna.opciones || []).find((o) => o.id === valor);
 
+  useEffect(() => {
+    if (!abierto) return;
+    function onClickFuera(e) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        popoverRef.current && !popoverRef.current.contains(e.target)
+      ) {
+        setAbierto(false);
+      }
+    }
+    function cerrar() { setAbierto(false); }
+    document.addEventListener('mousedown', onClickFuera);
+    window.addEventListener('scroll', cerrar, true);
+    window.addEventListener('resize', cerrar);
+    return () => {
+      document.removeEventListener('mousedown', onClickFuera);
+      window.removeEventListener('scroll', cerrar, true);
+      window.removeEventListener('resize', cerrar);
+    };
+  }, [abierto]);
+
+  function abrir() {
+    const r = triggerRef.current.getBoundingClientRect();
+    setPosicion({ top: r.bottom + 4, left: r.left });
+    setAbierto(true);
+  }
+
   return (
-    <div className="relative h-9 flex items-center" ref={ref}>
+    <div className="relative h-9 flex items-center" ref={triggerRef}>
       <button
-        onClick={() => setAbierto((v) => !v)}
+        onClick={() => (abierto ? setAbierto(false) : abrir())}
         className={
           opcion
             ? 'inline-flex items-center justify-center max-w-full h-6 px-3 rounded-full text-[11px] font-semibold text-white truncate leading-none tracking-tight hover:brightness-110 transition'
@@ -32,8 +64,12 @@ function CeldaEstado({ columna, valor, onGuardar }) {
       >
         {opcion?.label || 'Sin estado'}
       </button>
-      {abierto && (
-        <div className="absolute z-20 top-full left-0 mt-1 w-44 bg-surface2 border border-border rounded-lg shadow-xl p-1.5 space-y-1">
+      {abierto && posicion && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ position: 'fixed', top: posicion.top, left: posicion.left, zIndex: 100 }}
+          className="w-44 bg-surface2 border border-border rounded-lg shadow-xl p-1.5 space-y-1"
+        >
           {(columna.opciones || []).map((o) => (
             <button
               key={o.id}
@@ -50,7 +86,8 @@ function CeldaEstado({ columna, valor, onGuardar }) {
               Limpiar
             </button>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -226,16 +263,51 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPer
   );
 }
 
+// Cuántos días faltan hasta la fecha (negativo = ya venció). Se compara contra la
+// medianoche local de hoy para que "hoy" nunca cuente como vencido.
+function diasHasta(valor) {
+  if (!valor) return null;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const fecha = new Date(`${valor}T00:00:00`);
+  if (Number.isNaN(fecha.getTime())) return null;
+  return Math.round((fecha - hoy) / 86400000);
+}
+
 function CeldaFecha({ columna, valor, onGuardar }) {
+  const dias = diasHasta(valor);
+  // 0-15 días (incluye ya vencidas) en rojo, 16-30 días en amarillo, más lejos o sin
+  // fecha con el estilo neutro de siempre.
+  const urgente = dias !== null && dias <= 15;
+  const proxima = dias !== null && dias > 15 && dias <= 30;
+  const clase = urgente
+    ? 'bg-dangerBg text-dangerText hover:brightness-110'
+    : proxima
+      ? 'bg-warningBg text-warningText hover:brightness-110'
+      : 'bg-transparent hover:bg-surface2 text-text';
+  const titulo = dias === null
+    ? undefined
+    : dias < 0
+      ? `Venció hace ${Math.abs(dias)} día${Math.abs(dias) === 1 ? '' : 's'}`
+      : urgente
+        ? `Faltan ${dias} día${dias === 1 ? '' : 's'}`
+        : proxima
+          ? `Faltan ${dias} días`
+          : undefined;
   return (
     <input
       type="date"
       value={valor || ''}
       onChange={(e) => onGuardar(e.target.value, e.target.value ? `cambió ${columna.nombre} a ${e.target.value}` : `quitó ${columna.nombre}`)}
+      title={titulo}
+      // Clic en cualquier parte de la fecha (no solo en el ícono del calendario) abre el
+      // selector nativo directamente — showPicker() es soportado en navegadores modernos
+      // basados en Chromium; donde no exista, el campo se sigue pudiendo editar a mano.
+      onClick={(e) => e.target.showPicker?.()}
       // El ícono del calendario nativo del navegador es oscuro fijo — en modo oscuro
       // queda invisible sobre el fondo. [&::-webkit-calendar-picker-indicator] lo invierte
       // (queda claro) solo para navegadores basados en Chromium/WebKit.
-      className="w-full h-9 bg-transparent hover:bg-surface2 rounded text-xs px-2 border-none outline-none text-text [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
+      className={`w-full h-9 rounded text-xs px-2 border-none outline-none cursor-pointer transition [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 ${clase}`}
     />
   );
 }
@@ -270,10 +342,43 @@ function CeldaArchivo({ columna, valor, onGuardar }) {
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState('');
   const [lightbox, setLightbox] = useState(null);
-  const ref = useRef(null);
+  const [posicion, setPosicion] = useState(null);
+  const triggerRef = useRef(null);
+  const popoverRef = useRef(null);
   const inputRef = useRef(null);
-  useClickOutside(ref, () => setAbierto(false));
   const archivos = Array.isArray(valor) ? valor : [];
+
+  // Portal a <body>, igual que el resto de los desplegables de celda — así no se tapa con
+  // las filas siguientes de la tabla.
+  useEffect(() => {
+    if (!abierto) return;
+    function onClickFuera(e) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        popoverRef.current && !popoverRef.current.contains(e.target)
+      ) {
+        setAbierto(false);
+      }
+    }
+    function cerrar() { setAbierto(false); }
+    document.addEventListener('mousedown', onClickFuera);
+    window.addEventListener('scroll', cerrar, true);
+    window.addEventListener('resize', cerrar);
+    return () => {
+      document.removeEventListener('mousedown', onClickFuera);
+      window.removeEventListener('scroll', cerrar, true);
+      window.removeEventListener('resize', cerrar);
+    };
+  }, [abierto]);
+
+  function abrir() {
+    const r = triggerRef.current.getBoundingClientRect();
+    const ancho = 260;
+    let left = r.left;
+    if (left + ancho > window.innerWidth - 8) left = Math.max(8, window.innerWidth - ancho - 8);
+    setPosicion({ top: r.bottom + 4, left, ancho });
+    setAbierto(true);
+  }
 
   async function subirArchivos(files) {
     setError('');
@@ -314,8 +419,8 @@ function CeldaArchivo({ columna, valor, onGuardar }) {
   }
 
   return (
-    <div className="relative" ref={ref}>
-      <button onClick={() => setAbierto((v) => !v)} className="w-full h-9 rounded flex items-center gap-1 px-2 hover:bg-surface2 overflow-hidden">
+    <div ref={triggerRef}>
+      <button onClick={() => (abierto ? setAbierto(false) : abrir())} className="w-full h-9 rounded flex items-center gap-1 px-2 hover:bg-surface2 overflow-hidden">
         {archivos.slice(0, 3).map((a) => (
           <span key={a.id} className="w-5 h-5 rounded bg-bg border border-border flex items-center justify-center text-[10px] shrink-0 overflow-hidden">
             <IconoOFoto a={a} className="w-full h-full object-cover" />
@@ -324,8 +429,12 @@ function CeldaArchivo({ columna, valor, onGuardar }) {
         {archivos.length > 3 && <span className="text-[10px] text-textMuted">+{archivos.length - 3}</span>}
         {!archivos.length && <span className="text-textMuted text-xs">{subiendo ? 'Subiendo…' : '+ archivo'}</span>}
       </button>
-      {abierto && (
-        <div className="absolute z-20 top-full left-0 mt-1 w-64 bg-surface2 border border-border rounded-lg shadow-xl p-2">
+      {abierto && posicion && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ position: 'fixed', top: posicion.top, left: posicion.left, width: posicion.ancho, zIndex: 100 }}
+          className="bg-surface2 border border-border rounded-lg shadow-xl p-2"
+        >
           {archivos.length ? (
             <div className="space-y-1 mb-2 max-h-40 overflow-y-auto">
               {archivos.map((a) => (
@@ -351,9 +460,10 @@ function CeldaArchivo({ columna, valor, onGuardar }) {
             {subiendo ? 'Subiendo…' : '+ Subir archivo'}
           </button>
           <p className="text-[10px] text-textMuted mt-1 text-center">Máximo {LIMITE_MB_ARCHIVO} MB por archivo</p>
-        </div>
+        </div>,
+        document.body
       )}
-      {lightbox && (
+      {lightbox && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-6" onClick={() => setLightbox(null)}>
           <button onClick={() => setLightbox(null)} className="absolute top-4 right-5 text-white text-2xl leading-none">✕</button>
           <div onClick={(e) => e.stopPropagation()} className="w-[85vw] h-[82vh] flex flex-col items-center gap-2">
@@ -363,7 +473,8 @@ function CeldaArchivo({ columna, valor, onGuardar }) {
               <a href={lightbox.url} target="_blank" rel="noreferrer" className="text-accentTeal text-xs underline">Abrir en una pestaña nueva</a>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -11,7 +11,7 @@ const COLUMNAS_DEFAULT = [
     { id: 'listo', label: 'Listo', color: '#00c875' }
   ] },
   { id: 'responsable', nombre: 'Responsable', tipo: 'person', orden: 1, opciones: [] },
-  { id: 'fecha', nombre: 'Fecha', tipo: 'date', orden: 2, opciones: [] },
+  { id: 'fecha', nombre: 'Fecha de publicación', tipo: 'date', orden: 2, opciones: [] },
   { id: 'tipo', nombre: 'Tipo', tipo: 'text', orden: 3, opciones: [] }
 ];
 

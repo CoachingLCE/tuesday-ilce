@@ -1,16 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { colorSiguiente, PALETA_COLORES } from '../../lib/paletaTablero';
-
-function useClickOutside(ref, onOutside) {
-  useEffect(() => {
-    function onClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) onOutside();
-    }
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, [ref, onOutside]);
-}
 
 const TIPOS = [
   { id: 'status', label: 'Estado' },
@@ -136,31 +127,65 @@ function ColumnaEditable({ columna, onActualizar, onEliminar }) {
 
 function OpcionEditable({ opcion, onActualizar, onQuitar }) {
   const [colorAbierto, setColorAbierto] = useState(false);
-  const ref = useRef(null);
-  useClickOutside(ref, () => setColorAbierto(false));
+  const [posicion, setPosicion] = useState(null);
+  const triggerRef = useRef(null);
+  const popoverRef = useRef(null);
+
+  // Portal a <body> — este editor vive en un modal con overflow-y-auto, así que un
+  // desplegable "adentro" del modal se corta o queda tapado según el scroll.
+  useEffect(() => {
+    if (!colorAbierto) return;
+    function onClickFuera(e) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        popoverRef.current && !popoverRef.current.contains(e.target)
+      ) {
+        setColorAbierto(false);
+      }
+    }
+    function cerrar() { setColorAbierto(false); }
+    document.addEventListener('mousedown', onClickFuera);
+    window.addEventListener('scroll', cerrar, true);
+    window.addEventListener('resize', cerrar);
+    return () => {
+      document.removeEventListener('mousedown', onClickFuera);
+      window.removeEventListener('scroll', cerrar, true);
+      window.removeEventListener('resize', cerrar);
+    };
+  }, [colorAbierto]);
+
+  function abrir() {
+    const r = triggerRef.current.getBoundingClientRect();
+    setPosicion({ top: r.bottom + 4, left: r.left });
+    setColorAbierto(true);
+  }
 
   return (
     <div className="flex items-center gap-1 rounded-lg px-2 py-1" style={{ background: opcion.color }}>
-      <div className="relative" ref={ref}>
-        <button
-          onClick={() => setColorAbierto((v) => !v)}
-          className="w-3.5 h-3.5 rounded-full border border-white/50 shrink-0"
-          style={{ background: opcion.color }}
-          title="Cambiar color"
-        />
-        {colorAbierto && (
-          <div className="absolute z-30 top-full left-0 mt-1 bg-surface2 border border-border rounded-lg shadow-xl p-2 flex flex-wrap gap-1.5 w-32">
-            {PALETA_COLORES.map((c) => (
-              <button
-                key={c}
-                onClick={() => { onActualizar({ color: c }); setColorAbierto(false); }}
-                className="w-5 h-5 rounded-full"
-                style={{ background: c }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      <button
+        ref={triggerRef}
+        onClick={() => (colorAbierto ? setColorAbierto(false) : abrir())}
+        className="w-3.5 h-3.5 rounded-full border border-white/50 shrink-0 outline-none"
+        style={{ background: opcion.color }}
+        title="Cambiar color"
+      />
+      {colorAbierto && posicion && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ position: 'fixed', top: posicion.top, left: posicion.left, zIndex: 100 }}
+          className="bg-surface2 border border-border rounded-lg shadow-xl p-2 flex flex-wrap gap-1.5 w-32"
+        >
+          {PALETA_COLORES.map((c) => (
+            <button
+              key={c}
+              onClick={() => { onActualizar({ color: c }); setColorAbierto(false); }}
+              className="w-5 h-5 rounded-full"
+              style={{ background: c }}
+            />
+          ))}
+        </div>,
+        document.body
+      )}
       <input
         value={opcion.label}
         onChange={(e) => onActualizar({ label: e.target.value })}
