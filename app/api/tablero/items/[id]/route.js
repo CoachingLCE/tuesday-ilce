@@ -6,6 +6,7 @@ import { actualizarItemPorId, eliminarItemPorId, crearActividad, leerColumnas, l
 import { registrarAccion } from '../../../../../lib/auditoria';
 import { readSheet } from '../../../../../lib/sheets';
 import { extraerMencionados, normalizarEmails } from '../../../../../lib/menciones';
+import { enviarMail } from '../../../../../lib/mailer';
 
 // Calcula a quién le corresponde una notificación personal ("para mí") por este cambio:
 // - si se agregó a alguien como Responsable (o cualquier columna de personas) que antes no
@@ -48,6 +49,21 @@ export const PATCH = conManejo(async (request, { params }) => {
   if (actividadTexto) {
     await crearActividad({ id: `${id}-a${Date.now()}`, itemId: id, autor: usuario.nombre, texto: actividadTexto, para });
     await registrarAccion(usuario.email, usuario.nombre, 'Editó contenido del tablero', actividadTexto);
+
+    // Notifica por mail a cada mencionado/asignado nuevo — antes esto quedaba solo guardado en
+    // la Actividad ("Para mí"), sin avisarle a nadie de verdad. Si el mail falla (credenciales
+    // sin configurar, etc.) no debe tirar abajo el guardado del cambio en sí.
+    if (para.length > 0) {
+      const items = await leerItems();
+      const nombreItem = items.find((it) => it.id === id)?.nombre || 'un contenido del tablero';
+      const asunto = `${usuario.nombre} te mencionó en "${nombreItem}"`;
+      const html = `
+        <p><b>${usuario.nombre}</b> ${actividadTexto} en <b>"${nombreItem}"</b>:</p>
+        <blockquote style="border-left:3px solid #ccc;padding-left:10px;color:#444;">${(cambios.body || actividadTexto)}</blockquote>
+        <p><a href="https://tuesday-ilce.vercel.app/app">Ver en Tuesday ILCE →</a></p>
+      `;
+      await Promise.allSettled(para.map((email) => enviarMail({ to: email, subject: asunto, html })));
+    }
   }
   return NextResponse.json({ ok: true });
 })

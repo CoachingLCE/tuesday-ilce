@@ -62,6 +62,8 @@ export default function PanelDetalle({
   // campo es un contentEditable en vez de un <textarea>, así que hace falta ubicar el
   // cursor con la Selection API en vez de con selectionStart).
   const [mentionBodyAbierto, setMentionBodyAbierto] = useState(false);
+  const [bodyModificado, setBodyModificado] = useState(false);
+  const [bodyGuardadoOk, setBodyGuardadoOk] = useState(false);
   const [mentionBodyQuery, setMentionBodyQuery] = useState('');
   const [mentionBodyPos, setMentionBodyPos] = useState(null);
 
@@ -71,6 +73,8 @@ export default function PanelDetalle({
   useEffect(() => {
     setNombre(item.nombre || '');
     if (bodyRef.current) bodyRef.current.innerHTML = item.body || '';
+    setBodyModificado(false);
+    setBodyGuardadoOk(false);
     setMostrarActividad(false);
     setActividad([]);
     cargarComentarios();
@@ -118,7 +122,12 @@ export default function PanelDetalle({
       if (conLinks !== bodyRef.current.innerHTML) bodyRef.current.innerHTML = conLinks;
     }
     const html = bodyRef.current?.innerHTML || '';
-    if (html !== (item.body || '')) onActualizarItem({ body: html }, 'editó la descripción');
+    setBodyModificado(false);
+    if (html !== (item.body || '')) {
+      onActualizarItem({ body: html }, 'editó la descripción');
+      setBodyGuardadoOk(true);
+      setTimeout(() => setBodyGuardadoOk(false), 2000);
+    }
   }
 
   // Si se pega SOLO una URL (el caso más común: copiar un link de Calendar, Drive, etc.),
@@ -146,6 +155,7 @@ export default function PanelDetalle({
   // pero con la Selection API porque este campo es un contentEditable) y abre el menú de
   // sugerencias en esa posición.
   function onInputBody() {
+    setBodyModificado(true);
     const sel = typeof window !== 'undefined' ? window.getSelection() : null;
     if (!sel || sel.rangeCount === 0 || !bodyRef.current?.contains(sel.anchorNode)) {
       setMentionBodyAbierto(false);
@@ -198,6 +208,7 @@ export default function PanelDetalle({
     sel.addRange(nuevoRange);
 
     setMentionBodyAbierto(false);
+    setBodyModificado(true);
     bodyRef.current?.focus();
   }
 
@@ -310,10 +321,17 @@ export default function PanelDetalle({
 
           <div className="mb-5">
             <p className="text-xs font-semibold text-textMuted mb-1.5">Descripción</p>
-            <div className="flex gap-1 mb-1.5">
+            <div className="flex items-center gap-1 mb-1.5">
               <button type="button" onClick={() => comando('bold')} className="w-7 h-7 rounded border border-border text-xs font-bold hover:bg-surface2">B</button>
               <button type="button" onClick={() => comando('italic')} className="w-7 h-7 rounded border border-border text-xs italic hover:bg-surface2">I</button>
               <button type="button" onClick={() => comando('insertUnorderedList')} className="w-7 h-7 rounded border border-border text-xs hover:bg-surface2">•≡</button>
+              {bodyModificado && (
+                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={guardarBody}
+                  className="ml-2 text-xs px-3 py-1 rounded-md bg-accentTeal text-white font-semibold">
+                  💾 Guardar
+                </button>
+              )}
+              {bodyGuardadoOk && <span className="ml-2 text-xs text-successText font-semibold">✓ Guardado</span>}
             </div>
             <div
               ref={bodyRef}
