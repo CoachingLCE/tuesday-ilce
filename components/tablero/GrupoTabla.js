@@ -162,7 +162,7 @@ export default function GrupoTabla({
             <table className="w-full text-sm border-collapse table-fixed">
               <thead>
                 <tr className="border-t border-border">
-                  <th className="text-left text-xs text-textMuted font-medium px-4 py-2.5 w-[220px]">Nombre</th>
+                  <th className="text-left text-xs text-textMuted font-medium px-4 py-2.5 w-[320px]">Nombre</th>
                   {columnas.map((c) => (
                     <th key={c.id} className="text-left text-xs text-textMuted font-medium px-3 py-2.5">{c.nombre}</th>
                   ))}
@@ -177,8 +177,8 @@ export default function GrupoTabla({
               <tbody>
                 {items.map((item, i) => (
                   <tr key={item.id} className="border-t border-border hover:bg-surface2/60 group">
-                    <td className="px-4 py-2">
-                      <button onClick={() => onAbrirItem(item.id)} className="text-left text-sm hover:underline truncate max-w-[280px] block" data-tour="tablero-item-nombre">
+                    <td className="px-4 py-2 overflow-hidden">
+                      <button onClick={() => onAbrirItem(item.id)} className="text-left text-sm hover:underline truncate w-full block" data-tour="tablero-item-nombre" title={item.nombre || '(sin nombre)'}>
                         {item.nombre || '(sin nombre)'}
                       </button>
                     </td>
