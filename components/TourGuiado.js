@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { TOUR_PASOS, TAREAS_AYUDA } from '../lib/tourSteps';
+import { suscribirsePanelAbierto } from '../lib/panelAbierto';
 
 export default function TourGuiado() {
   const pathname = usePathname();
@@ -12,6 +13,12 @@ export default function TourGuiado() {
   const [modoTarea, setModoTarea] = useState(false);
   const [rect, setRect] = useState(null);
   const [buscando, setBuscando] = useState(false);
+  const [panelAbierto, setPanelAbierto] = useState(false);
+
+  // El detalle de una tarea y "Actividad del tablero" son paneles de pantalla completa que
+  // pueden terminar tapados por este botón (ej. su "Comentar") — mientras estén abiertos, lo
+  // ocultamos.
+  useEffect(() => suscribirsePanelAbierto(setPanelAbierto), []);
 
   const idx = pasoId ? TOUR_PASOS.findIndex((p) => p.id === pasoId) : -1;
   const pasoActual = idx >= 0 ? TOUR_PASOS[idx] : null;
@@ -90,14 +97,16 @@ export default function TourGuiado() {
 
   return (
     <>
-      <button
-        onClick={() => setMenuAbierto((v) => !v)}
-        className="fixed bottom-14 right-5 z-[90] bg-gradient-to-r from-accentPurple to-accentMagenta text-white text-sm font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-1.5 hover:opacity-90 transition-opacity no-print"
-      >
-        ❓ Necesito ayuda
-      </button>
+      {!panelAbierto && (
+        <button
+          onClick={() => setMenuAbierto((v) => !v)}
+          className="fixed bottom-14 right-5 z-[90] bg-gradient-to-r from-accentPurple to-accentMagenta text-white text-sm font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-1.5 hover:opacity-90 transition-opacity no-print"
+        >
+          ❓ Necesito ayuda
+        </button>
+      )}
 
-      {menuAbierto && !activo && (
+      {menuAbierto && !activo && !panelAbierto && (
         <div className="fixed inset-0 z-[91] flex items-end justify-end p-5" onClick={() => setMenuAbierto(false)}>
           <div className="bg-surface2 border border-border rounded-2xl p-4 w-80 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-semibold mb-1">Te mostramos cómo funciona Cronograma ILCE</h3>

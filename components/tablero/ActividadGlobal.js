@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { marcarPanelAbierto, marcarPanelCerrado } from '../../lib/panelAbierto';
 
 function formatearFecha(iso) {
   if (!iso) return '';
@@ -77,7 +78,16 @@ export default function ActividadGlobal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
+  // Mientras este panel está abierto, el botón flotante "❓ Necesito ayuda" se oculta para
+  // no superponerse con sus botones.
+  useEffect(() => {
+    marcarPanelAbierto();
+    return () => marcarPanelCerrado();
+  }, []);
+
   const paraMi = (actividad || []).filter((a) => (a.para || []).includes(usuario?.email));
+  const totalParaMi = paraMi.length;
+  const totalGeneral = (actividad || []).length;
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
@@ -96,8 +106,10 @@ export default function ActividadGlobal({
               }`}
             >
               Para mí
-              {sinVerParaMi > 0 && tab !== 'paraMi' && (
-                <span className="ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full bg-accentMagenta text-white text-[9px] font-bold items-center justify-center align-middle">{sinVerParaMi}</span>
+              {totalParaMi > 0 && (
+                <span className={`ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold items-center justify-center align-middle ${
+                  sinVerParaMi > 0 && tab !== 'paraMi' ? 'bg-accentMagenta text-white' : tab === 'paraMi' ? 'bg-white/25 text-white' : 'bg-surface text-textMuted'
+                }`}>{sinVerParaMi > 0 && tab !== 'paraMi' ? sinVerParaMi : totalParaMi}</span>
               )}
             </button>
             <button
@@ -107,8 +119,10 @@ export default function ActividadGlobal({
               }`}
             >
               General
-              {sinVerGeneral > 0 && tab !== 'general' && (
-                <span className="ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full bg-accentMagenta text-white text-[9px] font-bold items-center justify-center align-middle">{sinVerGeneral}</span>
+              {totalGeneral > 0 && (
+                <span className={`ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold items-center justify-center align-middle ${
+                  sinVerGeneral > 0 && tab !== 'general' ? 'bg-accentMagenta text-white' : tab === 'general' ? 'bg-white/25 text-white' : 'bg-surface text-textMuted'
+                }`}>{sinVerGeneral > 0 && tab !== 'general' ? sinVerGeneral : totalGeneral}</span>
               )}
             </button>
           </div>

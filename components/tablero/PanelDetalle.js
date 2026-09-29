@@ -2,6 +2,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Celda from './Celda';
+import { marcarPanelAbierto, marcarPanelCerrado } from '../../lib/panelAbierto';
+
+// Ancho del panel de detalle: el usuario puede arrastrar el borde izquierdo para agrandarlo
+// (se guarda en localStorage para que quede como lo dejó). Solo aplica en escritorio — en
+// mobile el panel siempre ocupa el ancho completo.
+const ANCHO_PANEL_MIN = 420;
+const ANCHO_PANEL_MAX = 1000;
+const ANCHO_PANEL_DEFAULT = 512;
+const CLAVE_ANCHO_PANEL = 'tuesday_panelDetalle_ancho';
 
 function escaparHtml(texto) {
   return texto.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -57,6 +66,48 @@ export default function PanelDetalle({
   const [mostrarActividad, setMostrarActividad] = useState(false);
   const [actividad, setActividad] = useState([]);
   const [cargandoActividad, setCargandoActividad] = useState(false);
+  const [anchoPanel, setAnchoPanel] = useState(ANCHO_PANEL_DEFAULT);
+  const [escritorio, setEscritorio] = useState(true);
+  const anchoRef = useRef(ANCHO_PANEL_DEFAULT);
+
+  // Mientras este panel está abierto, avisamos para que el botón flotante "❓ Necesito
+  // ayuda" se oculte y no se superponga con "Comentar" ni con el resto de los botones.
+  useEffect(() => {
+    marcarPanelAbierto();
+    return () => marcarPanelCerrado();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const guardado = parseInt(localStorage.getItem(CLAVE_ANCHO_PANEL), 10);
+      if (guardado && guardado >= ANCHO_PANEL_MIN && guardado <= ANCHO_PANEL_MAX) {
+        setAnchoPanel(guardado);
+        anchoRef.current = guardado;
+      }
+    } catch { /* ignorar */ }
+    const chequearAncho = () => setEscritorio(window.innerWidth >= 768);
+    chequearAncho();
+    window.addEventListener('resize', chequearAncho);
+    return () => window.removeEventListener('resize', chequearAncho);
+  }, []);
+
+  function iniciarResizePanel(e) {
+    e.preventDefault();
+    function mover(ev) {
+      const nuevo = Math.min(ANCHO_PANEL_MAX, Math.max(ANCHO_PANEL_MIN, window.innerWidth - ev.clientX));
+      anchoRef.current = nuevo;
+      setAnchoPanel(nuevo);
+    }
+    function soltar() {
+      window.removeEventListener('mousemove', mover);
+      window.removeEventListener('mouseup', soltar);
+      document.body.style.userSelect = '';
+      try { localStorage.setItem(CLAVE_ANCHO_PANEL, String(anchoRef.current)); } catch { /* ignorar */ }
+    }
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', mover);
+    window.addEventListener('mouseup', soltar);
+  }
 
   // @menciones dentro de la Descripción (mismo mecanismo que en Comentarios, pero acá el
   // campo es un contentEditable en vez de un <textarea>, así que hace falta ubicar el
@@ -281,7 +332,16 @@ export default function PanelDetalle({
   return (
     <div className="fixed inset-0 z-40 flex justify-end" data-tour="tablero-slideover">
       <div className="flex-1 bg-black/50" onClick={onCerrar} />
-      <div className="w-full max-w-lg h-full bg-surface border-l border-border overflow-y-auto">
+      <div
+        className="relative w-full max-w-[95vw] h-full bg-surface border-l border-border overflow-y-auto"
+        style={escritorio ? { width: anchoPanel, maxWidth: '95vw' } : undefined}
+      >
+        {/* Tirador para agrandar/achicar el panel arrastrando — solo en escritorio. */}
+        <div
+          onMouseDown={iniciarResizePanel}
+          title="Arrastrar para agrandar"
+          className="hidden md:block absolute top-0 bottom-0 left-0 w-1.5 -ml-0.5 cursor-col-resize z-20 hover:bg-accentTeal/50 active:bg-accentTeal/70 transition-colors"
+        />
         <div className="sticky top-0 bg-surface border-b border-border px-4 py-3 flex items-center gap-2 z-10">
           <select
             value={item.grupoId}

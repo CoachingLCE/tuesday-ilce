@@ -792,7 +792,7 @@ export default function TableroPage() {
           items={items}
           usuario={usuario}
           cargando={cargandoActividadGlobal}
-          tabInicial={sinVerParaMi > 0 ? 'paraMi' : 'general'}
+          tabInicial="paraMi"
           sinVerGeneral={sinVerGeneral}
           sinVerParaMi={sinVerParaMi}
           onCambiarTab={onCambiarTabActividad}
