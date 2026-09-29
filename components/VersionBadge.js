@@ -1,23 +1,47 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { APP_VERSION, APP_UPDATED_AT } from '../lib/version';
 import { CHANGELOG } from '../lib/changelog';
 
+const CLAVE_ULTIMA_VISTA = 'ilce-tuesday-ultima-version-vista';
+
 export default function VersionBadge() {
   const pathname = usePathname();
   const [abierto, setAbierto] = useState(false);
+  const [hayNovedades, setHayNovedades] = useState(false);
+  const [verAnteriores, setVerAnteriores] = useState(false);
   const fecha = new Date(APP_UPDATED_AT + 'T00:00:00').toLocaleDateString('es-AR', {
     day: '2-digit', month: '2-digit', year: 'numeric'
   });
 
+  // Parpadea mientras la última versión vista sea distinta de la actual; al hacer clic se
+  // marca como vista y se apaga solo.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(CLAVE_ULTIMA_VISTA) !== APP_VERSION) setHayNovedades(true);
+    } catch { /* ignorar */ }
+  }, []);
+
+  function abrir() {
+    setAbierto(true);
+    setHayNovedades(false);
+    try { localStorage.setItem(CLAVE_ULTIMA_VISTA, APP_VERSION); } catch { /* ignorar */ }
+  }
+
   if (pathname === '/confirmar-recepcion') return null;
+
+  const hoy = new Date();
+  const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  const delMes = CHANGELOG.filter((e) => (e.fecha || '').slice(0, 7) === mesActual);
+  const paraMostrar = verAnteriores ? CHANGELOG : (delMes.length ? delMes : CHANGELOG.slice(0, 1));
+  const hayMasParaVer = !verAnteriores && paraMostrar.length < CHANGELOG.length;
 
   return (
     <>
       <button
-        onClick={() => setAbierto(true)}
-        className="fixed bottom-5 right-5 text-[11px] text-textMuted bg-surface2/90 border border-border rounded-full px-3 py-1 z-40 no-print hover:text-text hover:border-accentTeal transition-colors"
+        onClick={abrir}
+        className={`fixed bottom-5 right-5 text-[11px] text-textMuted bg-surface2/90 border border-border rounded-full px-3 py-1 z-40 no-print hover:text-text hover:border-accentTeal transition-colors${hayNovedades ? ' version-badge-novedad' : ''}`}
         title="Ver novedades"
       >
         v{APP_VERSION} · Actualizado {fecha}
@@ -30,7 +54,7 @@ export default function VersionBadge() {
               <button onClick={() => setAbierto(false)} className="text-textMuted hover:text-text">✕</button>
             </div>
             <div className="space-y-5">
-              {CHANGELOG.map((entrada) => (
+              {paraMostrar.map((entrada) => (
                 <div key={entrada.version}>
                   <p className="text-sm font-semibold text-accentTeal mb-1.5">
                     v{entrada.version} · {new Date(entrada.fecha + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -46,6 +70,9 @@ export default function VersionBadge() {
                 </div>
               ))}
             </div>
+            {hayMasParaVer && (
+              <button onClick={() => setVerAnteriores(true)} className="mt-4 text-xs text-accentTeal hover:underline">Ver novedades anteriores →</button>
+            )}
           </div>
         </div>
       )}

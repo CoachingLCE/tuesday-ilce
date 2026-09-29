@@ -452,7 +452,8 @@ export default function TableroPage() {
   function coincideBusqueda(it, termino) {
     const q = termino.toLowerCase();
     if ((it.nombre || '').toLowerCase().includes(q)) return true;
-    if ((it.body || '').replace(/<[^>]+>/g, ' ').toLowerCase().includes(q)) return true;
+    const textoDescripciones = (it.descripciones?.length ? it.descripciones.map((d) => d.texto || '').join(' ') : (it.body || ''));
+    if (textoDescripciones.replace(/<[^>]+>/g, ' ').toLowerCase().includes(q)) return true;
     if (columnasTexto.some((c) => (it.cells?.[c.id] || '').toLowerCase().includes(q))) return true;
     if (columnaResponsable) {
       const nombres = responsablesDeItem(it).map((email) => (usuariosEquipo.find((u) => u.email === email)?.nombre || '').toLowerCase());

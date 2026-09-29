@@ -26,10 +26,13 @@ async function calcularDestinatarios({ id, cambios }) {
     });
   }
 
-  if (cambios.body !== undefined) {
+  // "textoMencionado" viaja junto con "descripciones" solo cuando se guardó una Descripción
+  // puntual — así solo se notifica por lo que se acaba de escribir, no por todas las
+  // descripciones guardadas anteriormente que quedaron sin tocar.
+  if (cambios.textoMencionado !== undefined) {
     const filas = await readSheet('Usuarios');
     const usuariosEquipo = filas.filter((f) => f.Email).map((f) => ({ email: f.Email, nombre: f.Nombre || f.Email }));
-    extraerMencionados(cambios.body, usuariosEquipo).forEach((email) => destinatarios.add(email));
+    extraerMencionados(cambios.textoMencionado, usuariosEquipo).forEach((email) => destinatarios.add(email));
   }
 
   return [...destinatarios];
@@ -59,7 +62,7 @@ export const PATCH = conManejo(async (request, { params }) => {
       const asunto = `${usuario.nombre} te mencionó en "${nombreItem}"`;
       const html = `
         <p><b>${usuario.nombre}</b> ${actividadTexto} en <b>"${nombreItem}"</b>:</p>
-        <blockquote style="border-left:3px solid #ccc;padding-left:10px;color:#444;">${(cambios.body || actividadTexto)}</blockquote>
+        <blockquote style="border-left:3px solid #ccc;padding-left:10px;color:#444;">${(cambios.textoMencionado || actividadTexto)}</blockquote>
         <p><a href="https://tuesday-ilce.vercel.app/app">Ver en Tuesday ILCE →</a></p>
       `;
       await Promise.allSettled(para.map((email) => enviarMail({ to: email, subject: asunto, html })));
