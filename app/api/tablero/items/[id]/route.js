@@ -12,7 +12,7 @@ import { enviarMail } from '../../../../../lib/mailer';
 // - si se agregó a alguien como Responsable (o cualquier columna de personas) que antes no
 //   estaba, esa persona;
 // - si en la Descripción se mencionó a alguien con @Nombre, esa persona.
-async function calcularDestinatarios({ id, cambios }) {
+async function calcularDestinatarios({ id, cambios, emailActor }) {
   const destinatarios = new Set();
 
   if (cambios.cells !== undefined) {
@@ -35,6 +35,11 @@ async function calcularDestinatarios({ id, cambios }) {
     extraerMencionados(cambios.textoMencionado, usuariosEquipo).forEach((email) => destinatarios.add(email));
   }
 
+  // Nunca te notifiques a vos mismo por algo que vos mismo hiciste (asignarte una tarea a
+  // vos, mencionarte a vos en tu propio texto, etc.) — antes de esto aparecía igual en
+  // "Para mí", lo cual era confuso porque uno no está "@" en su propia acción.
+  destinatarios.delete(emailActor);
+
   return [...destinatarios];
 }
 
@@ -47,7 +52,7 @@ export const PATCH = conManejo(async (request, { params }) => {
   const body = await request.json();
   const { actividadTexto, ...cambios } = body;
 
-  const para = actividadTexto ? await calcularDestinatarios({ id, cambios }) : [];
+  const para = actividadTexto ? await calcularDestinatarios({ id, cambios, emailActor: usuario.email }) : [];
   await actualizarItemPorId(id, cambios);
   if (actividadTexto) {
     await crearActividad({ id: `${id}-a${Date.now()}`, itemId: id, autor: usuario.nombre, texto: actividadTexto, para });

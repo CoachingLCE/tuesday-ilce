@@ -30,7 +30,8 @@ export const POST = conManejo(async (request, { params }) => {
 
   const filas = await readSheet('Usuarios');
   const usuariosEquipo = filas.filter((f) => f.Email).map((f) => ({ email: f.Email, nombre: f.Nombre || f.Email }));
-  const para = extraerMencionados(body.html, usuariosEquipo);
+  // No te notifiques a vos mismo si te mencionaste en tu propio comentario.
+  const para = extraerMencionados(body.html, usuariosEquipo).filter((email) => email !== usuario.email);
   const textoActividad = body.etiqueta ? `publicó un comentario en ${body.etiqueta}` : 'publicó un comentario';
   await crearActividad({ id: `${id}-a${Date.now()}`, itemId: id, autor: usuario.nombre, texto: textoActividad, para });
 

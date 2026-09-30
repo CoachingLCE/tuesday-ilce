@@ -588,7 +588,7 @@ export default function TableroPage() {
             className="text-xs px-2.5 py-1.5 rounded-lg border border-border bg-surface2 text-textSec hover:border-accentTeal hover:text-text font-medium"
             title="Agregar, renombrar, cambiarle el color a las opciones, o borrar una columna"
           >
-            ⚙️ Columnas
+            📊 Columnas
           </button>
         )}
 

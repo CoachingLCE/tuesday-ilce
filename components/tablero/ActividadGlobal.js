@@ -25,6 +25,46 @@ function etiquetaDia(clave) {
   } catch { return clave; }
 }
 
+// Un color por tipo de acción (mismo criterio en toda la app: crear/agregar = verde, editar =
+// celeste, comentar = turquesa, asignar = violeta, mover/cambiar = ámbar, quitar/eliminar =
+// rojo) — así de un vistazo se distingue qué pasó, sin tener que leer el texto completo.
+function colorPorAccion(texto) {
+  const t = (texto || '').toLowerCase();
+  if (t.startsWith('creó') || t.startsWith('agregó')) return 'text-successText';
+  if (t.startsWith('editó')) return 'text-infoText';
+  if (t.startsWith('publicó')) return 'text-accentTeal';
+  if (t.startsWith('asignó')) return 'text-accentPurple';
+  if (t.startsWith('movió') || t.startsWith('cambió')) return 'text-warningText';
+  if (t.startsWith('quitó') || t.startsWith('eliminó') || t.startsWith('desactivó')) return 'text-dangerText';
+  return 'text-textSec';
+}
+
+// Un color por persona (siempre el mismo para el mismo nombre, calculado a partir del texto
+// — no hace falta guardar nada) — así se puede seguir de un vistazo lo que hizo cada uno,
+// sobre todo cuando hay varias personas activas en el mismo período.
+const PALETA_AUTORES = ['#a78bfa', '#22d3ee', '#f472b6', '#fbbf24', '#60a5fa', '#4ade80', '#fb923c', '#f87171'];
+function colorAutor(nombre) {
+  let hash = 0;
+  for (let i = 0; i < (nombre || '').length; i++) hash = (hash * 31 + nombre.charCodeAt(i)) >>> 0;
+  return PALETA_AUTORES[hash % PALETA_AUTORES.length];
+}
+
+// Agrupa corridas consecutivas de la misma persona haciendo exactamente lo mismo sobre el
+// mismo contenido (típico al guardar varias veces seguidas probando algo) en una sola línea
+// con un "×N", en vez de repetir la fila una y otra vez.
+function compaginarConsecutivos(lista) {
+  const resultado = [];
+  for (const a of lista) {
+    const anterior = resultado[resultado.length - 1];
+    if (anterior && anterior.autor === a.autor && anterior.texto === a.texto && anterior.itemId === a.itemId) {
+      anterior._repeticiones = (anterior._repeticiones || 1) + 1;
+    } else {
+      resultado.push({ ...a, _repeticiones: 1 });
+    }
+  }
+  return resultado;
+}
+
 function ListaActividad({ actividad, items, cargando, onAbrirItem, vacioTexto }) {
   const porDia = {};
   actividad.forEach((a) => {
@@ -40,14 +80,16 @@ function ListaActividad({ actividad, items, cargando, onAbrirItem, vacioTexto })
     <div key={k} className="mb-4">
       <p className="text-[11px] font-semibold text-textMuted uppercase tracking-wide mb-1.5">{etiquetaDia(k)}</p>
       <div className="space-y-1.5">
-        {porDia[k].map((a) => {
+        {compaginarConsecutivos(porDia[k]).map((a) => {
           const item = items.find((it) => it.id === a.itemId);
           return (
             <div key={a.id} className="flex items-start gap-2 text-xs">
               <span className="w-1.5 h-1.5 rounded-full bg-accentTeal mt-1.5 shrink-0" />
               <div className="flex-1">
                 <span className="text-textSec">
-                  <span className="font-semibold text-text">{a.autor}</span> {a.texto}
+                  <span className="font-semibold" style={{ color: colorAutor(a.autor) }}>{a.autor}</span>{' '}
+                  <span className={colorPorAccion(a.texto)}>{a.texto}</span>
+                  {a._repeticiones > 1 && <span className="text-textMuted"> ×{a._repeticiones}</span>}
                   {item && (
                     <>
                       {' — '}
@@ -86,8 +128,6 @@ export default function ActividadGlobal({
   }, []);
 
   const paraMi = (actividad || []).filter((a) => (a.para || []).includes(usuario?.email));
-  const totalParaMi = paraMi.length;
-  const totalGeneral = (actividad || []).length;
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
@@ -106,10 +146,8 @@ export default function ActividadGlobal({
               }`}
             >
               Para mí
-              {totalParaMi > 0 && (
-                <span className={`ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold items-center justify-center align-middle ${
-                  sinVerParaMi > 0 && tab !== 'paraMi' ? 'bg-accentMagenta text-white' : tab === 'paraMi' ? 'bg-white/25 text-white' : 'bg-surface text-textMuted'
-                }`}>{sinVerParaMi > 0 && tab !== 'paraMi' ? sinVerParaMi : totalParaMi}</span>
+              {sinVerParaMi > 0 && (
+                <span className="ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full bg-accentMagenta text-white text-[9px] font-bold items-center justify-center align-middle">{sinVerParaMi}</span>
               )}
             </button>
             <button
@@ -119,10 +157,8 @@ export default function ActividadGlobal({
               }`}
             >
               General
-              {totalGeneral > 0 && (
-                <span className={`ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold items-center justify-center align-middle ${
-                  sinVerGeneral > 0 && tab !== 'general' ? 'bg-accentMagenta text-white' : tab === 'general' ? 'bg-white/25 text-white' : 'bg-surface text-textMuted'
-                }`}>{sinVerGeneral > 0 && tab !== 'general' ? sinVerGeneral : totalGeneral}</span>
+              {sinVerGeneral > 0 && (
+                <span className="ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full bg-accentMagenta text-white text-[9px] font-bold items-center justify-center align-middle">{sinVerGeneral}</span>
               )}
             </button>
           </div>

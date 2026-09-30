@@ -13,5 +13,5 @@ export const GET = conManejo(async (request) => {
   if (!tienePermisoVer(usuario)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 });
 
   const actividad = await leerActividad();
-  return NextResponse.json({ actividad: actividad.slice(0, 200) });
+  return NextResponse.json({ actividad: actividad.slice(0, 100) });
 })

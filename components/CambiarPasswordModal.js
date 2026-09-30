@@ -2,9 +2,32 @@
 import { useState } from 'react';
 import { useSession } from '../lib/useSession';
 
-const inputCls = 'w-full bg-bg border border-border rounded-lg px-2.5 py-2 text-sm';
+const inputCls = 'w-full bg-bg border border-border rounded-lg pl-2.5 pr-9 py-2 text-sm';
 const btnCls = 'bg-gradient-to-r from-accentPurple to-accentMagenta text-white rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-40';
 const btnSecCls = 'bg-transparent text-textSec border border-border rounded-lg px-3 py-1.5 text-xs';
+
+// Campo de contraseña con un "ojito" para mostrar/ocultar lo que se tipeó — así se puede
+// revisar antes de guardar, sin tener que confiar en escribir bien a ciegas.
+function CampoPassword({ label, value, onChange }) {
+  const [verlo, setVerlo] = useState(false);
+  return (
+    <>
+      <label className="text-xs text-textSec block mb-1">{label}</label>
+      <div className="relative mb-3">
+        <input type={verlo ? 'text' : 'password'} value={value} onChange={onChange} className={inputCls} />
+        <button
+          type="button"
+          onClick={() => setVerlo((v) => !v)}
+          tabIndex={-1}
+          title={verlo ? 'Ocultar' : 'Mostrar'}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-textMuted hover:text-text text-sm"
+        >
+          {verlo ? '🙈' : '👁️'}
+        </button>
+      </div>
+    </>
+  );
+}
 
 export default function CambiarPasswordModal({ onCerrar }) {
   const { fetchAutenticado } = useSession();
@@ -41,12 +64,9 @@ export default function CambiarPasswordModal({ onCerrar }) {
       <div className="bg-surface2 border border-border rounded-2xl p-5 w-80" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-base font-semibold mb-3">Cambiar mi contraseña</h3>
         <form onSubmit={guardar}>
-          <label className="text-xs text-textSec block mb-1">Contraseña actual (si ya tenías una)</label>
-          <input type="password" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} className={`${inputCls} mb-3`} />
-          <label className="text-xs text-textSec block mb-1">Contraseña nueva (mínimo 8 caracteres)</label>
-          <input type="password" value={passwordNueva} onChange={(e) => setPasswordNueva(e.target.value)} className={`${inputCls} mb-3`} />
-          <label className="text-xs text-textSec block mb-1">Confirmar contraseña nueva</label>
-          <input type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className={`${inputCls} mb-3`} />
+          <CampoPassword label="Contraseña actual (si ya tenías una)" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} />
+          <CampoPassword label="Contraseña nueva (mínimo 8 caracteres)" value={passwordNueva} onChange={(e) => setPasswordNueva(e.target.value)} />
+          <CampoPassword label="Confirmar contraseña nueva" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} />
           {msg && <p className={`text-xs mb-3 ${msg.tipo === 'error' ? 'text-dangerText' : 'text-successText'}`}>{msg.texto}</p>}
           <div className="flex gap-2">
             <button type="button" className={btnSecCls} onClick={onCerrar}>Cerrar</button>
