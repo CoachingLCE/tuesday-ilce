@@ -42,10 +42,13 @@ export default function Nav() {
 
   return (
     <div className="max-w-[1440px] mx-auto px-6 pt-4 no-print">
-      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <Logo height={28} />
-          <span className="text-sm font-bold text-textMuted">Tuesday ILCE</span>
+      <div className="flex items-center justify-between mb-2.5 gap-3 flex-wrap">
+        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <Logo height={20} />
+          <div className="leading-tight">
+            <p className="text-base font-semibold text-text">Tuesday ILCE</p>
+            <p className="text-[11px] font-normal text-textMuted">Tablero de contenidos</p>
+          </div>
         </Link>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -54,15 +57,15 @@ export default function Nav() {
             <div className="text-right text-xs leading-tight">
               <p className="font-semibold">{usuario.nombre}</p>
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setCambiandoPassword(true)} className="text-textMuted underline">Contraseña</button>
-                <button onClick={logout} className="text-textMuted underline">Salir</button>
+                <button onClick={() => setCambiandoPassword(true)} className="text-textMuted underline font-normal">Contraseña</button>
+                <button onClick={logout} className="text-textMuted underline font-normal">Salir</button>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      <nav className="mb-5 flex items-center gap-1.5 flex-wrap">
+      <nav className="mb-4 flex items-center gap-1.5 flex-wrap">
         {links.map((l) => itemNav(l.href, l.label, pathname))}
       </nav>
 

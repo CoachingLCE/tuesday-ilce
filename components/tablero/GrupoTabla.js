@@ -4,6 +4,27 @@ import { createPortal } from 'react-dom';
 import Celda from './Celda';
 import { PALETA_COLORES } from '../../lib/paletaTablero';
 
+// Íconos con "currentColor" en vez de emojis (🗑, ↑, ↓): un emoji tiene sus propios colores
+// fijos del sistema operativo y no sigue el color de texto ni el tema claro/oscuro, por eso
+// se veían apenas visibles (o de un color que no combinaba) en modo oscuro.
+function IconoTacho({ size = 13 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+function IconoFlecha({ direccion, size = 13 }) {
+  const d = direccion === 'up' ? 'M12 19V5M5 12l7-7 7 7' : 'M12 5v14M19 12l-7 7-7-7';
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
+  );
+}
+
 export default function GrupoTabla({
   grupo, columnas, items, usuariosEquipo, puedeEditarEstructura,
   onRenombrarGrupo, onRecolorearGrupo, onEliminarGrupo,
@@ -148,10 +169,10 @@ export default function GrupoTabla({
         {puedeEditarEstructura && (
           <button
             onClick={(e) => { e.stopPropagation(); onEliminarGrupo(); }}
-            className="w-6 h-6 rounded-full flex items-center justify-center text-xs bg-surface2 border border-border text-textSec hover:bg-dangerBg/50 hover:border-dangerText hover:text-dangerText transition-colors"
+            className="w-6 h-6 rounded-full flex items-center justify-center bg-surface2 border border-border text-textSec hover:bg-dangerBg/50 hover:border-dangerText hover:text-dangerText transition-colors"
             title="Eliminar grupo"
           >
-            🗑
+            <IconoTacho />
           </button>
         )}
       </div>
@@ -194,10 +215,16 @@ export default function GrupoTabla({
                     ))}
                     {puedeEditarEstructura && <td></td>}
                     <td className="px-1 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex items-center gap-1 justify-end pr-1">
-                        <button onClick={() => onMoverItem(item, -1)} disabled={i === 0} className="text-textMuted hover:text-text disabled:opacity-20 text-xs">↑</button>
-                        <button onClick={() => onMoverItem(item, 1)} disabled={i === items.length - 1} className="text-textMuted hover:text-text disabled:opacity-20 text-xs">↓</button>
-                        <button onClick={() => onEliminarItem(item)} className="text-textMuted hover:text-dangerText text-xs">🗑</button>
+                      <div className="flex items-center gap-1.5 justify-end pr-1">
+                        <button onClick={() => onMoverItem(item, -1)} disabled={i === 0} title="Subir" className="text-textSec hover:text-text disabled:opacity-20">
+                          <IconoFlecha direccion="up" />
+                        </button>
+                        <button onClick={() => onMoverItem(item, 1)} disabled={i === items.length - 1} title="Bajar" className="text-textSec hover:text-text disabled:opacity-20">
+                          <IconoFlecha direccion="down" />
+                        </button>
+                        <button onClick={() => onEliminarItem(item)} title="Eliminar" className="text-textSec hover:text-dangerText">
+                          <IconoTacho />
+                        </button>
                       </div>
                     </td>
                   </tr>

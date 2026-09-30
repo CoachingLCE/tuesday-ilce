@@ -54,6 +54,14 @@ body {
   transition: background-color .25s ease, color .25s ease;
 }
 
+/* El ícono de calendario de <input type="date"> lo dibuja el navegador, no CSS — por
+   defecto asume fondo claro y lo pinta negro, así que en el tema oscuro (que es el que
+   usa por defecto esta app) quedaba invisible sobre el fondo oscuro. "color-scheme" le
+   avisa al navegador qué paleta usar para sus propios controles nativos (fecha, hora,
+   scrollbars), y con eso el ícono pasa a blanco solo. */
+html[data-theme='dark'] { color-scheme: dark; }
+html[data-theme='light'] { color-scheme: light; }
+
 
 /* Badge de version: parpadea cuando hay novedades que la persona todavia no vio. */
 .version-badge-novedad { animation: version-badge-parpadeo 1.7s ease-in-out infinite; }

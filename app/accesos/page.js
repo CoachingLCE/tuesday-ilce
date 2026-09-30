@@ -155,7 +155,9 @@ export default function AccesosPage() {
         <p className="text-textSec text-sm">Cargando…</p>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {usuarios.map((u) => (
+          {/* Activos primero, desactivados al final — antes quedaban mezclados en el orden
+              en que los devolvía la planilla, y era fácil perder de vista quién sigue activo. */}
+          {[...usuarios].sort((a, b) => (b.activo ? 1 : 0) - (a.activo ? 1 : 0)).map((u) => (
             <FilaUsuario
               key={u.email}
               u={u}
