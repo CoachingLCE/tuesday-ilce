@@ -7,7 +7,9 @@ import AccesoDenegado from '../../components/AccesoDenegado';
 
 const boxCls = 'bg-surface2 border border-border rounded-2xl p-5 mb-4';
 const inputCls = 'bg-bg border border-border rounded-lg px-2.5 py-2 text-sm';
-const inputFechaCls = `${inputCls} [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100`;
+// El color del ícono nativo de <input type="date"> ya lo resuelve "color-scheme" en
+// globals.css según el tema activo — no hace falta forzarlo ni invertirlo acá.
+const inputFechaCls = inputCls;
 
 // Colores distintos por persona, para reconocerla rápido en la lista sin leer el nombre —
 // el mismo nombre siempre cae en el mismo color (hash simple sobre una paleta fija).

@@ -367,10 +367,11 @@ function CeldaFecha({ columna, valor, onGuardar }) {
       // selector nativo directamente — showPicker() es soportado en navegadores modernos
       // basados en Chromium; donde no exista, el campo se sigue pudiendo editar a mano.
       onClick={(e) => e.target.showPicker?.()}
-      // El ícono del calendario nativo del navegador es oscuro fijo — en modo oscuro
-      // queda invisible sobre el fondo. [&::-webkit-calendar-picker-indicator] lo invierte
-      // (queda claro) solo para navegadores basados en Chromium/WebKit.
-      className={`w-full h-9 rounded text-xs px-2 border-none outline-none cursor-pointer transition [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 ${clase}`}
+      // El color del ícono nativo de <input type="date"> ya lo resuelve "color-scheme"
+      // en globals.css según el tema activo (claro/oscuro) — forzarlo acá además a oscuro
+      // e invertirlo lo dejaba invisible de nuevo en modo oscuro (doble corrección que se
+      // cancelaba entre sí).
+      className={`w-full h-9 rounded text-xs px-2 border-none outline-none cursor-pointer transition ${clase}`}
     />
   );
 }

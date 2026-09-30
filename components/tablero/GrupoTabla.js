@@ -183,7 +183,7 @@ export default function GrupoTabla({
             <table className="w-full text-sm border-collapse table-fixed">
               <thead>
                 <tr className="border-t border-border">
-                  <th className="text-left text-xs text-textMuted font-medium px-4 py-2.5 w-[320px]">Nombre</th>
+                  <th className="text-left text-xs text-textMuted font-medium px-4 py-2.5 w-[440px]">Nombre</th>
                   {columnas.map((c) => (
                     <th key={c.id} className="text-left text-xs text-textMuted font-medium px-3 py-2.5">{c.nombre}</th>
                   ))}
