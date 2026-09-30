@@ -11,6 +11,7 @@ import TourGuiado from './TourGuiado';
 const LINKS = [
   { href: '/', label: 'Tablero' },
   { href: '/historial', label: 'Historial de cambios' },
+  { href: '/automatizaciones', label: '⚡ Automatizaciones', soloAdmin: true },
   { href: '/accesos', label: 'Accesos', soloAdmin: true }
 ];
 

@@ -48,7 +48,19 @@ Se completa sola a medida que se usan/editan columnas. `Tipo` es uno de: `status
 
 La columna `Para` es opcional (si el Sheet ya existe de antes y no la tenés, la app sigue funcionando igual, solo que sin poder separar "Para mí" de la actividad general) — ahí se guarda, en JSON, a quién le corresponde esa actividad como notificación personal (por ejemplo `["ana@ilce.com"]`), porque la mencionaron con @ o la asignaron como responsable.
 
-Para las últimas 5 pestañas alcanza con crear la hoja y poner solo la fila de encabezados — la app las va llenando sola.
+### `TableroAutomatizaciones`
+| Id | Tipo | Activo | Nombre | ColumnaFechaId | DiasAntes | ColumnaEstadoId | EstadosExcluidosJson | Destinatarios | Frecuencia | DiaSemana | CreadoPor | CreadoEn |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+
+Reglas configuradas desde "⚡ Automatizaciones" (recordatorios de vencimiento y resúmenes periódicos por mail). Se completa sola.
+
+### `TableroRecordatoriosEnviados`
+| Id | AutomatizacionId | ItemId | Clave | EnviadoEn |
+|---|---|---|---|---|
+
+Evita que la misma automatización avise dos veces por lo mismo. Se completa sola — no hace falta tocarla nunca a mano.
+
+Para todas estas pestañas (menos `TableroGrupos`/`TableroColumnas`, que conviene cargar a mano la primera vez) alcanza con crear la hoja y poner solo la fila de encabezados — la app las va llenando sola.
 
 ## 2) Compartir el Sheet
 
@@ -71,11 +83,14 @@ En el proyecto de Vercel → Settings → Environment Variables (marcando Produc
 | `GOOGLE_PRIVATE_KEY` | La `private_key` del JSON de esa cuenta de servicio (la misma que usan los otros proyectos, o una clave nueva generada en Google Cloud Console para la misma cuenta) |
 | `SESSION_SECRET` | Cualquier string largo y random, propio de esta app |
 | `SETUP_BOOTSTRAP_KEY` | Cualquier string largo y random — se usa una sola vez por persona para poner su primera contraseña, después no hace falta más |
+| `GMAIL_USER` | La dirección de Gmail desde la que se mandan los mails (menciones/asignaciones, y ahora las automatizaciones) |
+| `GMAIL_APP_PASSWORD` | Una "contraseña de aplicación" de esa cuenta de Gmail (no la contraseña normal) — se genera en [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), requiere tener la verificación en 2 pasos activada en esa cuenta |
+| `CRON_SECRET` | Cualquier string largo y random — Vercel lo agrega solo al pedido diario que dispara las automatizaciones, para que nadie más pueda llamar a ese endpoint desde afuera |
 
 | `GOOGLE_DRIVE_FOLDER_ID` | Solo si usás la opción A de Drive (Workspace) — ver punto 2.1 |
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN` | Solo si usás la opción B de Drive (cuenta personal, sin Workspace) — ver punto 2.1 |
 
-No hacen falta (todavía) `GMAIL_USER`, `GMAIL_APP_PASSWORD` ni `CRON_SECRET` — no hay ninguna función de mail ni de tareas programadas en esta primera versión.
+Sin `GMAIL_USER`/`GMAIL_APP_PASSWORD` cargadas, los mails (de menciones y de automatizaciones) simplemente no se mandan — el resto de la app sigue funcionando igual. Sin `CRON_SECRET` cargada, las automatizaciones quedan configuradas pero Vercel no las va a poder disparar todos los días.
 
 ### 2.1) Carpeta de Drive para los archivos subidos
 
@@ -144,6 +159,17 @@ Cada archivo que se sube queda visible para "cualquiera con el link" (de solo le
 1. Entrá a `/setup-password` con tu email (el que cargaste como SuperAdmin en el Sheet) y la `SETUP_BOOTSTRAP_KEY`, y elegí tu contraseña.
 2. Iniciá sesión en `/login`.
 3. Desde "Accesos" podés cargar al resto del equipo (no hace falta que cada uno pase por `/setup-password` con la bootstrap key — vos como SuperAdmin les podés asignar una contraseña directamente desde ahí).
+
+## 5) Automatizaciones (opcional)
+
+Desde "⚡ Automatizaciones" (solo Admin/SuperAdmin) se pueden armar reglas que la app ejecuta sola, todos los días a las 8:00 (hora Argentina) — recordatorios de vencimiento por contenido, o un resumen periódico con todo junto — y manda por mail.
+
+Para que funcione hacen falta, además de las pestañas del Sheet de más arriba:
+1. `GMAIL_USER` y `GMAIL_APP_PASSWORD` cargadas en Vercel (ver tabla de variables, punto 3).
+2. `CRON_SECRET` cargada en Vercel (cualquier string random — no hace falta configurarlo en ningún otro lado, Vercel lo toma solo de esta variable de entorno y lo manda en el pedido diario).
+3. Un deploy nuevo después de subir este código, para que Vercel lea el archivo `vercel.json` (que define el horario) y active la tarea programada — se ve en el proyecto de Vercel, pestaña "Cron Jobs".
+
+Sin estos tres pasos, la pantalla de Automatizaciones funciona igual (se pueden crear/pausar/borrar reglas), pero ningún mail se termina mandando.
 
 ## Qué hace cada rol
 
