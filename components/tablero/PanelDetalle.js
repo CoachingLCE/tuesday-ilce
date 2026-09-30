@@ -378,7 +378,7 @@ function DescripcionCard({
         onClick={onClickBody}
         onInput={onInputBody}
         onKeyUp={onInputBody}
-        className={`min-h-[80px] rounded-lg px-3 py-2 text-sm outline-none [&_a]:text-accentTeal [&_a]:underline [&_a]:cursor-pointer ${
+        className={`min-h-[80px] rounded-lg px-3 py-2 text-sm outline-none break-words [&_a]:text-accentTeal [&_a]:underline [&_a]:cursor-pointer [&_a]:break-all ${
           bloqueada ? 'bg-surface2/60 text-textSec cursor-default' : 'bg-surface border border-border focus:border-accentTeal'
         }`}
         data-tour={numero === 1 ? 'tablero-descripcion' : undefined}
