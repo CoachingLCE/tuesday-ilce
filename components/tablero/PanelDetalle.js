@@ -18,6 +18,13 @@ function escaparHtml(texto) {
 
 const URL_REGEX = /(https?:\/\/[^\s<>"']+)/g;
 
+// Emojis más comunes para el picker de la Descripción — un set curado y chico (no todo el
+// set Unicode) para que el popover entre en pantalla y no haya que scrollear demasiado.
+const EMOJIS_DESCRIPCION = [
+  '😀', '😂', '😊', '😉', '😍', '🤔', '😅', '😎', '🙌', '👏', '👍', '👎', '🙏', '💪', '✅', '❌',
+  '⚠️', '🔥', '🎉', '🚀', '💡', '📌', '📅', '⏰', '❤️', '⭐', '✨', '🎯', '📈', '📉', '💬', '👀'
+];
+
 // Convierte URLs sueltas en texto a links <a> clickeables, sin tocar lo que ya está
 // dentro de una etiqueta <a> (para no terminar con links anidados al pasarlo dos veces).
 function linkificarHtml(html) {
@@ -65,7 +72,16 @@ function DescripcionCard({
   const [mentionAbierto, setMentionAbierto] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionPos, setMentionPos] = useState(null);
+  const [emojiAbierto, setEmojiAbierto] = useState(false);
+  const [emojiPos, setEmojiPos] = useState(null);
+  const emojiTriggerRef = useRef(null);
+  const emojiPopoverRef = useRef(null);
   const bodyRef = useRef(null);
+  // El <select> de tamaño de letra es un control nativo: abrirlo le saca el foco (y con él
+  // la selección de texto) al contentEditable antes de que dispare onChange. Se guarda la
+  // selección en el mousedown (todavía con foco) para poder restaurarla justo antes de
+  // aplicar el comando.
+  const seleccionGuardadaRef = useRef(null);
 
   const [nuevoComentario, setNuevoComentario] = useState('');
   const [enviandoComentario, setEnviandoComentario] = useState(false);
@@ -167,6 +183,70 @@ function DescripcionCard({
     bodyRef.current?.focus();
   }
 
+  // Tamaño de letra: execCommand('fontSize') solo entiende la escala vieja 1-7 (no px), pero
+  // sigue siendo la forma más simple y compatible de aplicarlo a la selección actual dentro
+  // de un contentEditable sin armar un editor de texto enriquecido propio.
+  function guardarSeleccion() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && bodyRef.current?.contains(sel.anchorNode)) {
+      seleccionGuardadaRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  }
+
+  function comandoTamaño(e) {
+    const valor = e.target.value;
+    if (!valor) return;
+    bodyRef.current?.focus();
+    // El <select> nativo le sacó el foco al contentEditable al abrirse — sin restaurar la
+    // selección guardada en el mousedown, fontSize se aplicaría sobre nada (o sobre donde
+    // haya quedado el cursor por última vez, no sobre lo que la persona eligió resaltar).
+    if (seleccionGuardadaRef.current) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(seleccionGuardadaRef.current);
+    }
+    document.execCommand('fontSize', false, valor);
+    e.target.value = '';
+  }
+
+  // El popover de emojis se abre con un portal a <body> (mismo motivo que el selector de
+  // color de GrupoTabla: si quedara "adentro" con position: absolute, se podría cortar).
+  useEffect(() => {
+    if (!emojiAbierto) return;
+    function onClickFuera(ev) {
+      if (
+        emojiTriggerRef.current && !emojiTriggerRef.current.contains(ev.target) &&
+        emojiPopoverRef.current && !emojiPopoverRef.current.contains(ev.target)
+      ) {
+        setEmojiAbierto(false);
+      }
+    }
+    function cerrar() { setEmojiAbierto(false); }
+    document.addEventListener('mousedown', onClickFuera);
+    window.addEventListener('scroll', cerrar, true);
+    window.addEventListener('resize', cerrar);
+    return () => {
+      document.removeEventListener('mousedown', onClickFuera);
+      window.removeEventListener('scroll', cerrar, true);
+      window.removeEventListener('resize', cerrar);
+    };
+  }, [emojiAbierto]);
+
+  function abrirEmoji() {
+    const r = emojiTriggerRef.current.getBoundingClientRect();
+    setEmojiPos({ top: r.bottom + 4, left: r.left });
+    setEmojiAbierto(true);
+  }
+
+  // Inserta el emoji en la posición del cursor dentro del contentEditable — insertText es
+  // la forma estándar de meter texto plano ahí sin pisar el resto del contenido/formato.
+  function insertarEmoji(emoji) {
+    bodyRef.current?.focus();
+    document.execCommand('insertText', false, emoji);
+    setEmojiAbierto(false);
+    setModificado(true);
+  }
+
   function activarEdicion() {
     setBloqueada(false);
     setTimeout(() => bodyRef.current?.focus(), 0);
@@ -243,9 +323,43 @@ function DescripcionCard({
           </button>
         ) : (
           <>
-            <button type="button" onClick={() => comando('bold')} className="w-7 h-7 rounded border border-border text-xs font-bold hover:bg-surface2">B</button>
-            <button type="button" onClick={() => comando('italic')} className="w-7 h-7 rounded border border-border text-xs italic hover:bg-surface2">I</button>
-            <button type="button" onClick={() => comando('insertUnorderedList')} className="w-7 h-7 rounded border border-border text-xs hover:bg-surface2">•≡</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => comando('bold')} title="Negrita" className="w-7 h-7 rounded border border-border text-xs font-bold hover:bg-surface2">B</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => comando('italic')} title="Cursiva" className="w-7 h-7 rounded border border-border text-xs italic hover:bg-surface2">I</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => comando('underline')} title="Subrayado" className="w-7 h-7 rounded border border-border text-xs underline hover:bg-surface2">U</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => comando('strikeThrough')} title="Tachado" className="w-7 h-7 rounded border border-border text-xs line-through hover:bg-surface2">S</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => comando('insertUnorderedList')} title="Lista" className="w-7 h-7 rounded border border-border text-xs hover:bg-surface2">•≡</button>
+            <select
+              defaultValue=""
+              onMouseDown={guardarSeleccion}
+              onChange={comandoTamaño}
+              title="Tamaño de letra"
+              className="h-7 rounded border border-border text-xs bg-bg px-1 text-textSec hover:text-text"
+            >
+              <option value="">Tamaño</option>
+              <option value="2">Pequeño</option>
+              <option value="3">Normal</option>
+              <option value="5">Grande</option>
+              <option value="7">Enorme</option>
+            </select>
+            <div ref={emojiTriggerRef}>
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => (emojiAbierto ? setEmojiAbierto(false) : abrirEmoji())} title="Insertar emoji" className="w-7 h-7 rounded border border-border text-xs hover:bg-surface2">
+                🙂
+              </button>
+            </div>
+            {emojiAbierto && emojiPos && typeof document !== 'undefined' && createPortal(
+              <div
+                ref={emojiPopoverRef}
+                style={{ position: 'fixed', top: emojiPos.top, left: emojiPos.left, zIndex: 100 }}
+                className="w-56 bg-surface2 border border-border rounded-lg shadow-xl p-2 grid grid-cols-8 gap-1"
+              >
+                {EMOJIS_DESCRIPCION.map((e) => (
+                  <button key={e} type="button" onMouseDown={(ev) => { ev.preventDefault(); insertarEmoji(e); }} className="text-base leading-none w-6 h-6 flex items-center justify-center rounded hover:bg-bg">
+                    {e}
+                  </button>
+                ))}
+              </div>,
+              document.body
+            )}
             {modificado && (
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={guardar}
                 className="ml-2 text-xs px-3 py-1 rounded-md bg-accentTeal text-white font-semibold">

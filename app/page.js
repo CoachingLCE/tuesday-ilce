@@ -86,6 +86,10 @@ export default function TableroPage() {
   // breve que confirma que el reordenamiento pasó de verdad).
   const [grupoSobreId, setGrupoSobreId] = useState(null);
   const [grupoRecienMovidoId, setGrupoRecienMovidoId] = useState(null);
+  // Arrastre de CONTENIDOS individuales (ver moverItemArrastrado más abajo) — separado del
+  // arrastre de grupos de arriba.
+  const [itemArrastradoId, setItemArrastradoId] = useState(null);
+  const [itemSobre, setItemSobre] = useState(null); // { itemId: string|null, grupoId }
 
   useEffect(() => {
     if (!cargando && !usuario) router.push('/login');
@@ -336,6 +340,72 @@ export default function TableroPage() {
     } catch {
       setError('No se pudo reordenar. Refrescá la página.');
     }
+  }
+
+  // Arrastrar contenidos con el mouse (pedido de Diego: poder moverlos a mano en vez de usar
+  // siempre las flechitas, incluso cambiándolos de grupo/mes) — mismo patrón que el arrastre
+  // de grupos de más abajo, pero llevado a nivel de contenido individual. `itemSobre` guarda
+  // sobre qué fila (o, si itemId es null, al final de qué grupo) está pasando el arrastre
+  // ahora mismo, para la línea de inserción que dibuja GrupoTabla.
+  function iniciarArrastreItem(itemId) { setItemArrastradoId(itemId); }
+  function terminarArrastreItem() { setItemArrastradoId(null); setItemSobre(null); }
+  function sobreItem(itemId, grupoId) { setItemSobre({ itemId, grupoId }); }
+  function salirItem() { setItemSobre(null); }
+
+  // Mueve `origenId` al grupo `grupoDestinoId`, insertado justo antes de `antesDeId` (o al
+  // final si es null) — recalcula el "orden" de todo el grupo destino (y, si cambió de
+  // grupo, también el de origen, para no dejarle un hueco) y persiste solo lo que cambió.
+  async function moverItemArrastrado(origenId, grupoDestinoId, antesDeId) {
+    const origen = items.find((it) => it.id === origenId);
+    if (!origen) return;
+    if (origen.grupoId === grupoDestinoId && origen.id === antesDeId) return;
+    const mismoGrupo = origen.grupoId === grupoDestinoId;
+
+    const destinoOrdenado = items.filter((it) => it.grupoId === grupoDestinoId && it.id !== origenId).sort((a, b) => a.orden - b.orden);
+    let idxInsercion = antesDeId ? destinoOrdenado.findIndex((it) => it.id === antesDeId) : -1;
+    if (idxInsercion === -1) idxInsercion = destinoOrdenado.length;
+    destinoOrdenado.splice(idxInsercion, 0, origen);
+
+    const cambios = [];
+    destinoOrdenado.forEach((it, i) => {
+      if (it.orden !== i || it.grupoId !== grupoDestinoId) cambios.push({ id: it.id, orden: i, grupoId: grupoDestinoId });
+    });
+    if (!mismoGrupo) {
+      // Se le sacó un contenido al grupo de origen — se cierra el hueco que deja en su
+      // "orden" (si no, con el tiempo se acumulan huecos entre los números).
+      items.filter((it) => it.grupoId === origen.grupoId && it.id !== origenId)
+        .sort((a, b) => a.orden - b.orden)
+        .forEach((it, i) => { if (it.orden !== i) cambios.push({ id: it.id, orden: i, grupoId: it.grupoId }); });
+    }
+    if (!cambios.length) return;
+
+    setItems((prev) => prev.map((it) => {
+      const c = cambios.find((x) => x.id === it.id);
+      return c ? { ...it, orden: c.orden, grupoId: c.grupoId } : it;
+    }));
+    try {
+      await conIndicadorGuardado(() => Promise.all(
+        cambios.map((c) => fetchAutenticado(`/api/tablero/items/${encodeURIComponent(c.id)}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orden: c.orden, grupoId: c.grupoId })
+        }))
+      ));
+    } catch {
+      setError('No se pudo mover el contenido. Refrescá la página.');
+    }
+  }
+
+  function soltarItemSobre(itemDestino, grupoDestinoId) {
+    const origenId = itemArrastradoId;
+    setItemArrastradoId(null); setItemSobre(null);
+    if (!origenId || origenId === itemDestino.id) return;
+    moverItemArrastrado(origenId, grupoDestinoId, itemDestino.id);
+  }
+
+  function soltarItemAlFinal(grupoDestinoId) {
+    const origenId = itemArrastradoId;
+    setItemArrastradoId(null); setItemSobre(null);
+    if (!origenId) return;
+    moverItemArrastrado(origenId, grupoDestinoId, null);
   }
 
   /* ---------------- columnas ---------------- */
@@ -764,6 +834,14 @@ export default function TableroPage() {
               onSobreDestino={() => setGrupoSobreId(grupo.id)}
               onSalirDestino={() => setGrupoSobreId((v) => (v === grupo.id ? null : v))}
               onSoltarSobre={(e) => { e.preventDefault(); soltarGrupoSobre(grupo.id); }}
+              itemArrastradoId={itemArrastradoId}
+              itemSobreId={itemSobre?.grupoId === grupo.id ? itemSobre.itemId : null}
+              onIniciarArrastreItem={iniciarArrastreItem}
+              onTerminarArrastreItem={terminarArrastreItem}
+              onSobreItem={sobreItem}
+              onSalirItem={salirItem}
+              onSoltarItemSobre={soltarItemSobre}
+              onSoltarItemAlFinal={soltarItemAlFinal}
             />
           ))}
 

@@ -25,12 +25,23 @@ function IconoFlecha({ direccion, size = 13 }) {
   );
 }
 
+// Tipo de dato propio (no 'text/plain', que ya usa el drag de GRUPOS) para que arrastrar un
+// contenido no dispare por error el reordenamiento de grupos del onDrop del contenedor de
+// más abajo — cada uno escucha solo el tipo que le corresponde.
+const TIPO_DRAG_ITEM = 'application/x-tuesday-item';
+
 export default function GrupoTabla({
   grupo, columnas, items, usuariosEquipo, puedeEditarEstructura,
   onRenombrarGrupo, onRecolorearGrupo, onEliminarGrupo,
   onCrearItem, onActualizarCelda, onAbrirItem, onMoverItem, onEliminarItem, onAbrirEditorColumnas,
   onCrearPersona, onAgregarOpcion, puedeReordenarGrupos, arrastrando, hayArrastreActivo, sobreDestino, recienMovido,
-  onIniciarArrastre, onTerminarArrastre, onSobreDestino, onSalirDestino, onSoltarSobre
+  onIniciarArrastre, onTerminarArrastre, onSobreDestino, onSalirDestino, onSoltarSobre,
+  // Arrastrar contenidos (items) para reordenarlos o cambiarlos de grupo/mes — separado del
+  // arrastre de GRUPOS de arriba (que es todo el grupo, reservado a Super Admin). Cualquiera
+  // que pueda mover contenidos con las flechitas puede arrastrarlos (no depende de
+  // puedeReordenarGrupos, que es solo para reordenar los grupos en sí).
+  itemArrastradoId, itemSobreId, onIniciarArrastreItem, onTerminarArrastreItem,
+  onSobreItem, onSalirItem, onSoltarItemSobre, onSoltarItemAlFinal
 }) {
   const [colapsado, setColapsado] = useState(false);
   const [editandoNombre, setEditandoNombre] = useState(false);
@@ -107,10 +118,28 @@ export default function GrupoTabla({
                 : 'border-border'
         }`}
         data-tour="tablero-grupo"
-        onDragEnter={puedeReordenarGrupos ? (e) => { e.preventDefault(); onSobreDestino?.(); } : undefined}
-        onDragOver={puedeReordenarGrupos ? (e) => e.preventDefault() : undefined}
-        onDragLeave={puedeReordenarGrupos ? (e) => { if (!e.currentTarget.contains(e.relatedTarget)) onSalirDestino?.(); } : undefined}
-        onDrop={puedeReordenarGrupos ? onSoltarSobre : undefined}
+        // Estos cuatro manejadores atienden DOS arrastres distintos que pueden pasar por acá:
+        // el de GRUPOS enteros (reservado a Super Admin, dataTransfer sin tipo propio) y el
+        // de CONTENIDOS sueltos (TIPO_DRAG_ITEM, cualquiera puede) — se distinguen por el tipo
+        // de dato que trae el arrastre. Soltar un contenido acá (fuera de una fila puntual,
+        // ver más abajo) lo manda al final de ESTE grupo — así también se puede arrastrar a
+        // un grupo vacío o directamente al espacio libre debajo de la última fila.
+        onDragEnter={(e) => {
+          if (e.dataTransfer.types.includes(TIPO_DRAG_ITEM)) { e.preventDefault(); onSobreItem?.(null, grupo.id); return; }
+          if (puedeReordenarGrupos) { e.preventDefault(); onSobreDestino?.(); }
+        }}
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes(TIPO_DRAG_ITEM) || puedeReordenarGrupos) e.preventDefault();
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget)) return;
+          if (e.dataTransfer.types.includes(TIPO_DRAG_ITEM)) { onSalirItem?.(); return; }
+          if (puedeReordenarGrupos) onSalirDestino?.();
+        }}
+        onDrop={(e) => {
+          if (e.dataTransfer.types.includes(TIPO_DRAG_ITEM)) { e.preventDefault(); onSoltarItemAlFinal?.(grupo.id); return; }
+          if (puedeReordenarGrupos) onSoltarSobre(e);
+        }}
       >
       <div
         className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
@@ -183,6 +212,7 @@ export default function GrupoTabla({
             <table className="w-full text-sm border-collapse table-fixed">
               <thead>
                 <tr className="border-t border-border">
+                  <th className="w-7"></th>
                   <th className="text-left text-xs text-textMuted font-medium px-4 py-2.5 w-[440px]">Nombre</th>
                   {columnas.map((c) => (
                     <th key={c.id} className="text-left text-xs text-textMuted font-medium px-3 py-2.5">{c.nombre}</th>
@@ -197,7 +227,29 @@ export default function GrupoTabla({
               </thead>
               <tbody>
                 {items.map((item, i) => (
-                  <tr key={item.id} className="border-t border-border hover:bg-surface2/60 group">
+                  <tr
+                    key={item.id}
+                    className={`border-t relative group ${
+                      itemArrastradoId === item.id ? 'opacity-40' : 'hover:bg-surface2/60'
+                    } ${itemSobreId === item.id && itemArrastradoId !== item.id ? 'border-t-2 border-t-accentTeal' : 'border-border'}`}
+                    // Soltar sobre una fila puntual inserta el contenido arrastrado JUSTO
+                    // ANTES de ella (misma fila y, si hace falta, otro grupo/mes) — la línea
+                    // celeste de arriba marca dónde va a quedar antes de soltar.
+                    onDragEnter={(e) => { if (!e.dataTransfer.types.includes(TIPO_DRAG_ITEM)) return; e.preventDefault(); e.stopPropagation(); onSobreItem?.(item.id, grupo.id); }}
+                    onDragOver={(e) => { if (e.dataTransfer.types.includes(TIPO_DRAG_ITEM)) { e.preventDefault(); e.stopPropagation(); } }}
+                    onDrop={(e) => { if (!e.dataTransfer.types.includes(TIPO_DRAG_ITEM)) return; e.preventDefault(); e.stopPropagation(); onSoltarItemSobre?.(item, grupo.id); }}
+                  >
+                    <td className="pl-2 pr-0 py-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span
+                        draggable
+                        onDragStart={(e) => { e.dataTransfer.setData(TIPO_DRAG_ITEM, item.id); e.dataTransfer.effectAllowed = 'move'; onIniciarArrastreItem?.(item.id); }}
+                        onDragEnd={() => onTerminarArrastreItem?.()}
+                        className="text-textMuted hover:text-text cursor-grab active:cursor-grabbing px-1 rounded hover:bg-surface2 select-none"
+                        title="Arrastrar para mover (a otra posición o a otro mes)"
+                      >
+                        ⠿
+                      </span>
+                    </td>
                     <td className="px-4 py-2 overflow-hidden">
                       <button onClick={() => onAbrirItem(item.id)} className="text-left text-sm hover:underline truncate w-full block" data-tour="tablero-item-nombre" title={item.nombre || '(sin nombre)'}>
                         {item.nombre || '(sin nombre)'}
@@ -231,7 +283,7 @@ export default function GrupoTabla({
                 ))}
                 {!items.length && (
                   <tr>
-                    <td colSpan={columnas.length + 2} className="px-3 py-3 text-xs text-textMuted">Todavía no hay contenidos en este grupo.</td>
+                    <td colSpan={columnas.length + 3} className="px-3 py-3 text-xs text-textMuted">Todavía no hay contenidos en este grupo.</td>
                   </tr>
                 )}
               </tbody>
