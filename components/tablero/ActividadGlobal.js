@@ -33,7 +33,7 @@ function colorPorAccion(texto) {
   if (t.startsWith('creó') || t.startsWith('agregó')) return 'text-successText';
   if (t.startsWith('editó')) return 'text-infoText';
   if (t.startsWith('publicó')) return 'text-accentTeal';
-  if (t.startsWith('asignó')) return 'text-accentPurple';
+  if (t.startsWith('asignó')) return 'text-accentPurpleTxt';
   if (t.startsWith('movió') || t.startsWith('cambió')) return 'text-warningText';
   if (t.startsWith('quitó') || t.startsWith('eliminó') || t.startsWith('desactivó')) return 'text-dangerText';
   return 'text-textSec';
@@ -78,7 +78,7 @@ function ListaActividad({ actividad, items, cargando, onAbrirItem, vacioTexto })
 
   return dias.map((k) => (
     <div key={k} className="mb-4">
-      <p className="text-[11px] font-semibold text-textMuted uppercase tracking-wide mb-1.5">{etiquetaDia(k)}</p>
+      <p className="text-[12px] font-semibold text-textMuted uppercase tracking-wide mb-1.5">{etiquetaDia(k)}</p>
       <div className="space-y-1.5">
         {compaginarConsecutivos(porDia[k]).map((a) => {
           const item = items.find((it) => it.id === a.itemId);
@@ -99,7 +99,7 @@ function ListaActividad({ actividad, items, cargando, onAbrirItem, vacioTexto })
                     </>
                   )}
                 </span>
-                <p className="text-[10px] text-textMuted">{formatearFecha(a.fecha)}</p>
+                <p className="text-[12px] text-textMuted">{formatearFecha(a.fecha)}</p>
               </div>
             </div>
           );
@@ -135,8 +135,8 @@ export default function ActividadGlobal({
       <div className="w-full max-w-md h-full bg-surface border-l border-border overflow-y-auto">
         <div className="sticky top-0 bg-surface border-b border-border px-4 py-3 z-10">
           <div className="flex items-center gap-2 mb-2.5">
-            <p className="text-sm font-bold flex-1">🔔 Actividad del tablero</p>
-            <button onClick={onCerrar} className="text-textMuted hover:text-text text-lg leading-none" title="Cerrar">✕</button>
+            <p className="text-sm font-bold flex-1"> Actividad del tablero</p>
+            <button onClick={onCerrar} className="text-textMuted hover:text-text text-lg leading-none" title="Cerrar"></button>
           </div>
           <div className="flex items-center gap-1.5">
             <button
@@ -147,7 +147,7 @@ export default function ActividadGlobal({
             >
               Para mí
               {sinVerParaMi > 0 && (
-                <span className="ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full bg-accentMagenta text-white text-[9px] font-bold items-center justify-center align-middle">{sinVerParaMi}</span>
+                <span className="ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full bg-accentMagenta text-white text-[12px] font-bold items-center justify-center align-middle">{sinVerParaMi}</span>
               )}
             </button>
             <button
@@ -158,7 +158,7 @@ export default function ActividadGlobal({
             >
               General
               {sinVerGeneral > 0 && (
-                <span className="ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full bg-accentMagenta text-white text-[9px] font-bold items-center justify-center align-middle">{sinVerGeneral}</span>
+                <span className="ml-1.5 inline-flex min-w-[15px] h-[15px] px-1 rounded-full bg-accentMagenta text-white text-[12px] font-bold items-center justify-center align-middle">{sinVerGeneral}</span>
               )}
             </button>
           </div>

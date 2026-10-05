@@ -9,6 +9,7 @@ import PanelDetalle from '../components/tablero/PanelDetalle';
 import EditorColumnas from '../components/tablero/EditorColumnas';
 import ActividadGlobal from '../components/tablero/ActividadGlobal';
 import VistaCalendario from '../components/tablero/VistaCalendario';
+import { useDialogos } from '../components/Dialogos';
 
 function nuevoId(prefijo) {
   return `${prefijo}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -49,6 +50,7 @@ function contarSinVer(lista, ultimaVistaIso) {
 }
 
 export default function TableroPage() {
+  const { confirmar } = useDialogos();
   const { usuario, cargando, fetchAutenticado } = useSession();
   const router = useRouter();
 
@@ -239,7 +241,7 @@ export default function TableroPage() {
     const aviso = cantidad
       ? `¿Eliminar el grupo "${grupo.nombre}" y sus ${cantidad} contenido(s)? Esta acción no se puede deshacer.`
       : `¿Eliminar el grupo "${grupo.nombre}"?`;
-    if (!window.confirm(aviso)) return;
+    if (!(await confirmar({ titulo: 'Eliminar grupo', mensaje: aviso, textoConfirmar: 'Eliminar', peligro: true }))) return;
     setGrupos((prev) => prev.filter((g) => g.id !== grupo.id));
     setItems((prev) => prev.filter((it) => it.grupoId !== grupo.id));
     try {
@@ -316,7 +318,7 @@ export default function TableroPage() {
   }
 
   async function eliminarItemConfirmado(item) {
-    if (!window.confirm(`¿Eliminar "${item.nombre || 'este contenido'}"?`)) return;
+    if (!(await confirmar({ titulo: 'Eliminar contenido', mensaje: `¿Eliminar "${item.nombre || 'este contenido'}"?`, textoConfirmar: 'Eliminar', peligro: true }))) return;
     eliminarItem(item);
   }
 
@@ -446,7 +448,7 @@ export default function TableroPage() {
   }
 
   async function eliminarColumna(id) {
-    if (!window.confirm('¿Eliminar esta columna? Los valores cargados en ella se van a perder.')) return;
+    if (!(await confirmar({ titulo: 'Eliminar columna', mensaje: '¿Eliminar esta columna? Los valores cargados en ella se van a perder.', textoConfirmar: 'Eliminar', peligro: true }))) return;
     setColumnas((prev) => prev.filter((c) => c.id !== id));
     try {
       await conIndicadorGuardado(async () => {
@@ -632,7 +634,7 @@ export default function TableroPage() {
       {/* Toolbar única: búsqueda a la izquierda, vistas y acciones a la derecha. */}
       <div className="flex flex-wrap items-center gap-2 mb-3 bg-surface2 border border-border rounded-xl px-2.5 py-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-textMuted text-sm">🔎</span>
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-textMuted text-sm"></span>
           <input
             value={busqueda}
             onChange={(e) => { setBusqueda(e.target.value); if (e.target.value && filtroTab && filtroTab !== 'todos') setFiltroTab('todos'); }}
@@ -647,13 +649,13 @@ export default function TableroPage() {
             onClick={() => setVista('lista')}
             className={`px-2.5 py-1 rounded-md font-medium ${vista === 'lista' ? 'bg-gradient-to-r from-accentPurple to-accentMagenta text-white' : 'text-textSec hover:text-text'}`}
           >
-            📋 Lista
+             Lista
           </button>
           <button
             onClick={() => setVista('calendario')}
             className={`px-2.5 py-1 rounded-md font-medium ${vista === 'calendario' ? 'bg-gradient-to-r from-accentPurple to-accentMagenta text-white' : 'text-textSec hover:text-text'}`}
           >
-            📅 Calendario
+             Calendario
           </button>
         </div>
 
@@ -663,7 +665,7 @@ export default function TableroPage() {
             className="text-xs px-2.5 py-1.5 rounded-lg border border-border bg-bg text-textSec hover:border-accentTeal hover:text-text font-medium"
             title="Agregar, renombrar, cambiarle el color a las opciones, o borrar una columna"
           >
-            📊 Columnas
+             Columnas
           </button>
         )}
 
@@ -672,7 +674,7 @@ export default function TableroPage() {
             {guardandoCount > 0 ? (
               <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-accentTeal animate-pulse" /> Guardando…</span>
             ) : ultimoGuardado ? (
-              <span>✓ Guardado · {horaCorta(ultimoGuardado)}</span>
+              <span> Guardado · {horaCorta(ultimoGuardado)}</span>
             ) : null}
           </div>
           <button
@@ -680,9 +682,9 @@ export default function TableroPage() {
             className="relative w-8 h-8 rounded-lg bg-bg border border-border flex items-center justify-center hover:border-accentTeal"
             title="Actividad del tablero" data-tour="tablero-actividad-global"
           >
-            🔔
+            
             {actividadSinVer > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-accentMagenta text-white text-[10px] font-semibold flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-accentMagenta text-white text-[12px] font-semibold flex items-center justify-center">
                 {actividadSinVer}
               </span>
             )}
@@ -696,7 +698,7 @@ export default function TableroPage() {
       <div className="mb-3 space-y-2">
         {pestanas && (
           <div className="flex flex-wrap items-center gap-2" data-tour="tablero-tabs">
-            <span className="text-[10.5px] font-normal uppercase tracking-wider text-textMuted w-20 shrink-0">Contenido</span>
+            <span className="text-[12px] font-normal uppercase tracking-wider text-textMuted w-20 shrink-0">Contenido</span>
             <div className="flex flex-wrap items-center gap-1.5">
               {pestanas.map((t) => {
                 const activo = (filtroTab || 'todos') === t.id;
@@ -705,7 +707,7 @@ export default function TableroPage() {
                   <button
                     key={t.id}
                     onClick={() => setFiltroTab(t.id)}
-                    className={`h-6 px-2.5 rounded-full text-[11px] font-medium ${activo ? 'bg-gradient-to-r from-accentPurple to-accentMagenta text-white' : 'bg-surface2 text-textSec hover:text-text'}`}
+                    className={`h-6 px-2.5 rounded-full text-[12px] font-medium ${activo ? 'bg-gradient-to-r from-accentPurple to-accentMagenta text-white' : 'bg-surface2 text-textSec hover:text-text'}`}
                   >
                     {t.label} <span className="opacity-70">{cantidad}</span>
                   </button>
@@ -715,7 +717,7 @@ export default function TableroPage() {
             {hayFiltrosActivos && (
               <button
                 onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroTab('todos'); setFiltroResponsables([]); setBusquedaResponsable(''); }}
-                className="ml-auto text-[11px] font-normal text-textMuted hover:text-text underline"
+                className="ml-auto text-[12px] font-normal text-textMuted hover:text-text underline"
               >
                 Limpiar filtros
               </button>
@@ -725,7 +727,7 @@ export default function TableroPage() {
 
         {columnaEstado && (columnaEstado.opciones || []).length > 0 && (
           <div className="flex flex-wrap items-center gap-2" data-tour="tablero-filtro-estado">
-            <span className="text-[10.5px] font-normal uppercase tracking-wider text-textMuted w-20 shrink-0">Estado</span>
+            <span className="text-[12px] font-normal uppercase tracking-wider text-textMuted w-20 shrink-0">Estado</span>
             <div className="flex flex-wrap items-center gap-1.5">
               {(columnaEstado.opciones || []).map((o) => {
                 const activo = filtroEstado === o.id;
@@ -734,7 +736,7 @@ export default function TableroPage() {
                   <button
                     key={o.id}
                     onClick={() => setFiltroEstado(activo ? '' : o.id)}
-                    className={`h-6 pl-1.5 pr-2.5 rounded-full text-[11px] font-medium flex items-center gap-1 border ${activo ? 'border-text' : 'border-border'} bg-surface2 hover:border-text`}
+                    className={`h-6 pl-1.5 pr-2.5 rounded-full text-[12px] font-medium flex items-center gap-1 border ${activo ? 'border-text' : 'border-border'} bg-surface2 hover:border-text`}
                   >
                     <span className="w-2 h-2 rounded-full" style={{ background: o.color }} />
                     {o.label} <span className="text-textMuted">{cantidad}</span>
@@ -747,18 +749,18 @@ export default function TableroPage() {
 
         {columnaResponsable && (
           <div className="flex flex-wrap items-center gap-2" data-tour="tablero-filtro-responsable">
-            <span className="text-[10.5px] font-normal uppercase tracking-wider text-textMuted w-20 shrink-0">Responsable</span>
+            <span className="text-[12px] font-normal uppercase tracking-wider text-textMuted w-20 shrink-0">Responsable</span>
             <div className="flex flex-wrap items-center gap-1.5">
               <button
                 onClick={() => setFiltroResponsables([])}
-                className={`h-6 px-2.5 rounded-full text-[11px] font-medium border ${!filtroResponsables.length ? 'border-text' : 'border-border'} bg-surface2 hover:border-text`}
+                className={`h-6 px-2.5 rounded-full text-[12px] font-medium border ${!filtroResponsables.length ? 'border-text' : 'border-border'} bg-surface2 hover:border-text`}
               >
                 Todos <span className="text-textMuted">{poolParaContarResponsables.length}</span>
               </button>
               {usuariosEquipo.length > 8 && (
                 <input
                   value={busquedaResponsable} onChange={(e) => setBusquedaResponsable(e.target.value)}
-                  placeholder="🔎 responsable…" className="h-6 bg-surface2 border border-border rounded-full px-2.5 text-[11px] font-normal w-32 outline-none"
+                  placeholder=" responsable…" className="h-6 bg-surface2 border border-border rounded-full px-2.5 text-[12px] font-normal w-32 outline-none"
                 />
               )}
               {opcionesResponsableVisibles.map((o) => {
@@ -767,9 +769,9 @@ export default function TableroPage() {
                   <button
                     key={o.email}
                     onClick={() => alternarFiltroResponsable(o.email)}
-                    className={`h-6 pl-1 pr-2.5 rounded-full text-[11px] font-medium flex items-center gap-1 border ${activo ? 'border-text' : 'border-border'} bg-surface2 hover:border-text`}
+                    className={`h-6 pl-1 pr-2.5 rounded-full text-[12px] font-medium flex items-center gap-1 border ${activo ? 'border-text' : 'border-border'} bg-surface2 hover:border-text`}
                   >
-                    <span className="w-4 h-4 rounded-full bg-accentPurple text-white flex items-center justify-center text-[9px] font-semibold shrink-0">
+                    <span className="w-4 h-4 rounded-full bg-accentPurple text-white flex items-center justify-center text-[12px] font-semibold shrink-0">
                       {o.email === '__sin__' ? '—' : o.nombre.slice(0, 1).toUpperCase()}
                     </span>
                     {o.nombre} <span className="text-textMuted">{o.cantidad}</span>

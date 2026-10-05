@@ -112,7 +112,7 @@ export default function AccesosPage() {
       {mensaje && <p className="text-successText text-sm mb-3">{mensaje}</p>}
 
       <div className="bg-surface2 border border-border rounded-2xl p-5 mb-6">
-        <h2 className="text-sm font-semibold mb-3">➕ Nuevo usuario</h2>
+        <h2 className="text-sm font-semibold mb-3"> Nuevo usuario</h2>
         <form onSubmit={crear} className="grid grid-cols-2 gap-2.5">
           <div>
             <label className="text-xs text-textSec block mb-1">Email</label>
@@ -249,7 +249,7 @@ function FilaUsuario({ u, puedeEditar, onActualizar, esSuperAdmin, onVerDetalle 
           <span className="text-textSec text-xs ml-2">{u.email}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`text-[11.5px] ${u.activo ? 'text-successText' : 'text-dangerText'}`}>
+          <span className={`text-[12px] ${u.activo ? 'text-successText' : 'text-dangerText'}`}>
             {u.activo ? '● Activo' : '● Desactivado'} {!u.tieneContrasena && '· sin contraseña asignada'}
           </span>
           {esSuperAdmin && (

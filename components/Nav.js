@@ -11,7 +11,7 @@ import TourGuiado from './TourGuiado';
 const LINKS = [
   { href: '/', label: 'Tablero' },
   { href: '/historial', label: 'Historial de cambios' },
-  { href: '/automatizaciones', label: '⚡ Automatizaciones', soloAdmin: true },
+  { href: '/automatizaciones', label: ' Automatizaciones', soloAdmin: true },
   { href: '/accesos', label: 'Accesos', soloAdmin: true }
 ];
 
@@ -48,7 +48,7 @@ export default function Nav() {
           <Logo height={20} />
           <div className="leading-tight">
             <p className="text-base font-semibold text-text">Tuesday ILCE</p>
-            <p className="text-[11px] font-normal text-textMuted">Tablero de contenidos</p>
+            <p className="text-[12px] font-normal text-textMuted">Tablero de contenidos</p>
           </div>
         </Link>
 

@@ -45,7 +45,7 @@ export default function EditorColumnas({ columnas, onCrear, onActualizar, onElim
       <div className="bg-surface2 border border-border rounded-2xl p-5 w-full max-w-xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <p className="text-base font-bold">Columnas del tablero</p>
-          <button onClick={onCerrar} className="text-textMuted hover:text-text">✕</button>
+          <button onClick={onCerrar} className="text-textMuted hover:text-text"></button>
         </div>
 
         <div className="space-y-4">
@@ -108,7 +108,7 @@ function ColumnaEditable({ columna, onActualizar, onEliminar }) {
         >
           {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
         </select>
-        <button onClick={onEliminar} className="text-textMuted hover:text-dangerText text-sm px-1" title="Eliminar columna">🗑</button>
+        <button onClick={onEliminar} className="text-textMuted hover:text-dangerText text-sm px-1" title="Eliminar columna"></button>
       </div>
 
       {columna.tipo === 'status' && (
@@ -191,7 +191,7 @@ function OpcionEditable({ opcion, onActualizar, onQuitar }) {
         onChange={(e) => onActualizar({ label: e.target.value })}
         className="bg-transparent text-white text-xs font-medium outline-none w-20"
       />
-      <button onClick={onQuitar} className="text-white/80 hover:text-white text-xs">✕</button>
+      <button onClick={onQuitar} className="text-white/80 hover:text-white text-xs"></button>
     </div>
   );
 }

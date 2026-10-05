@@ -11,9 +11,10 @@
   --color-border: 38 44 74;
   --color-text: 238 240 248;
   --color-textSec: 154 161 194;
-  --color-textMuted: 107 114 153;
+  --color-textMuted: 152 161 198;   /* #98a1c6: contraste AA (antes #6b7299, 3,8:1) */
   --color-accentTeal: 34 211 238;
-  --color-accentPurple: 124 58 237;
+  --color-accentPurple: 122 31 150;   /* #7a1f96: violeta de marca */
+  --color-accentPurpleTxt: 190 120 225;  /* violeta para TEXTO sobre fondo oscuro: 6,4:1 (el violeta de marca como texto da 2,3:1) */
   --color-accentMagenta: 192 38 211;
   --color-successBg: 15 46 34;
   --color-successText: 74 222 128;
@@ -33,10 +34,11 @@
   --color-border: 226 232 240;
   --color-text: 15 23 42;
   --color-textSec: 71 85 105;
-  --color-textMuted: 148 163 184;
-  --color-accentTeal: 8 145 178;
-  --color-accentPurple: 124 58 237;
-  --color-accentMagenta: 162 28 175;
+  --color-textMuted: 86 104 119;     /* #566877: contraste AA (antes #94a3b8, 2,6:1) */
+  --color-accentTeal: 3 115 139;     /* #03738b: teal de marca (antes #0891b2) */
+  --color-accentPurple: 112 22 141;   /* #70168d: violeta de marca (antes #7c3aed) */
+  --color-accentPurpleTxt: 112 22 141;  /* violeta de marca como texto sobre fondo claro: 8,9:1 */
+  --color-accentMagenta: 150 25 143;  /* #96198f: magenta de marca (antes #a21caf) */
   --color-successBg: 220 252 231;
   --color-successText: 21 128 61;
   --color-warningBg: 254 243 199;
@@ -46,11 +48,19 @@
   --color-dangerBg: 254 226 226;
   --color-dangerText: 185 28 28;
 }
+@layer base {
+  /* Foco visible para quien navega con teclado */
+  :focus-visible {
+    outline: 2px solid rgb(var(--color-accentTeal));
+    outline-offset: 2px;
+  }
+}
+
 
 body {
   background-color: rgb(var(--color-bg));
   color: rgb(var(--color-text));
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-texto);
   transition: background-color .25s ease, color .25s ease;
 }
 
@@ -68,4 +78,61 @@ html[data-theme='light'] { color-scheme: light; }
 @keyframes version-badge-parpadeo {
   0%, 100% { opacity: 0.45; box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); border-color: rgb(var(--color-border)); }
   50% { opacity: 1; box-shadow: 0 0 12px 3px rgba(34, 211, 238, 0.65); border-color: rgb(var(--color-accentTeal)); }
+}
+
+/* ===== Tipografía de marca (manual de ILCE): Dosis para el texto y TeX Gyre Adventor para los títulos.
+   Las fuentes están dentro de la app (carpeta public/fonts): no se piden a Google, así se ven igual en
+   todos los dispositivos. Dosis es más baja y angosta que una letra de sistema, por eso lleva
+   size-adjust (se agranda un 8 % para que se lea del mismo tamaño que antes). ===== */
+@font-face{font-family:'Dosis';src:url('/fonts/dosis-400.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;size-adjust:108%}
+@font-face{font-family:'Dosis';src:url('/fonts/dosis-500.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap;size-adjust:108%}
+@font-face{font-family:'Dosis';src:url('/fonts/dosis-600.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap;size-adjust:108%}
+@font-face{font-family:'Dosis';src:url('/fonts/dosis-700.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap;size-adjust:108%}
+@font-face{font-family:'TeX Gyre Adventor';src:url('/fonts/adventor-400.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'TeX Gyre Adventor';src:url('/fonts/adventor-700.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+:root{--font-texto:'Dosis',system-ui,-apple-system,'Segoe UI',sans-serif;--font-titulo:'TeX Gyre Adventor','Century Gothic','Avant Garde',system-ui,sans-serif}
+h1,h2,.font-display{font-family:var(--font-titulo)}
+button,input,select,textarea{font-family:inherit}
+
+/* Tablas en celular: una tarjeta por fila, con el nombre de la columna al lado de cada dato (lo agrega
+   components/TablasEnTarjetas.js). En pantallas grandes no cambia nada. */
+@media (max-width:640px){
+  table.tabla-en-tarjetas thead{display:none}
+  table.tabla-en-tarjetas,table.tabla-en-tarjetas tbody{display:block;width:100%;min-width:0!important}
+  table.tabla-en-tarjetas tbody tr{display:flex;flex-direction:column;padding:10px 12px;margin:0 0 8px;border:1px solid rgb(var(--color-border));border-radius:12px;background:rgb(var(--color-surface2))}
+  table.tabla-en-tarjetas td[data-label]{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;padding:3px 0!important;border:0!important;white-space:normal!important;max-width:100%;overflow-wrap:anywhere}
+  table.tabla-en-tarjetas td[data-label]::before{content:attr(data-label);min-width:96px;font-size:12px;font-weight:600;color:rgb(var(--color-textMuted))}
+  table.tabla-en-tarjetas td[data-titulo]{order:-1;font-size:15px;font-weight:700;padding-bottom:6px!important}
+  table.tabla-en-tarjetas td[data-titulo]::before{display:none}
+}
+
+/* Tablas en escritorio: la fila bajo el mouse se resalta y los encabezados se leen como encabezados. */
+@media (min-width:641px){
+  table thead th{font-weight:600;font-size:12.5px;color:rgb(var(--color-textMuted))}
+  table tbody tr{transition:background-color .12s ease}
+  table tbody tr:hover{background-color:rgb(var(--color-surface2) / .55)}
+}
+
+/* ===== Íconos de trazo uniforme (Lucide, licencia ISC) — iguales en todas las apps de ILCE =====
+   Reemplazan a los emoji de la interfaz. Cada ícono es un carácter del rango privado U+E000–U+F8FF que el
+   navegador dibuja con esta fuente (/fonts/iconos.woff2), del color y tamaño del texto que lo rodea.
+   IMPORTANTE: cada cara de íconos lleva el MISMO peso que la cara de texto con la que se combina (400, 500, 600, 700).
+   Si se declarara con un rango (100 900) el navegador elige una sola de las dos y los íconos no se dibujan.
+   NO usar estos caracteres en lo que sale de la app (mails, Excel, PDF, portapapeles, WhatsApp, tooltips, listas
+   desplegables): ahí se usa el emoji original o nada. Qué ícono es cada carácter: ver iconos.js */
+@font-face{font-family:'Dosis';src:url('/fonts/iconos.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+E000-F8FF}
+@font-face{font-family:'Dosis';src:url('/fonts/iconos.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap;unicode-range:U+E000-F8FF}
+@font-face{font-family:'Dosis';src:url('/fonts/iconos.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap;unicode-range:U+E000-F8FF}
+@font-face{font-family:'Dosis';src:url('/fonts/iconos.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap;unicode-range:U+E000-F8FF}
+@font-face{font-family:'TeX Gyre Adventor';src:url('/fonts/iconos.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+E000-F8FF}
+@font-face{font-family:'TeX Gyre Adventor';src:url('/fonts/iconos.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap;unicode-range:U+E000-F8FF}
+
+/* Tablas que piden tarjetas con data-tarjetas (el tablero): datos en dos columnas para que cada tarjeta no quede altísima,
+   y las columnas sin título (arrastre, "＋", acciones de mouse) ocultas. */
+@media (max-width:640px){
+  table.tabla-en-tarjetas td[data-oculta]{display:none!important}
+  table.tabla-en-tarjetas[data-tarjetas] tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 14px}
+  table.tabla-en-tarjetas[data-tarjetas] td[data-label]{flex-direction:column;align-items:flex-start;flex-wrap:nowrap;gap:2px;min-width:0;overflow:visible!important}
+  table.tabla-en-tarjetas[data-tarjetas] td[data-titulo]{grid-column:1/-1;padding:0 0 6px!important}
+  table.tabla-en-tarjetas[data-tarjetas] td:not([data-label]):not([data-oculta]){grid-column:1/-1}
 }

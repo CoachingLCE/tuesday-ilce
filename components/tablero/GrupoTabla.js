@@ -209,7 +209,7 @@ export default function GrupoTabla({
       {!colapsado && (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse table-fixed">
+            <table data-tarjetas className="w-full text-sm border-collapse table-fixed">
               <thead>
                 <tr className="border-t border-border">
                   <th className="w-7"></th>

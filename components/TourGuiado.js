@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { TOUR_PASOS, TAREAS_AYUDA } from '../lib/tourSteps';
 import { suscribirsePanelAbierto } from '../lib/panelAbierto';
+import { APP_VERSION } from '../lib/version';
 
 export default function TourGuiado() {
   const pathname = usePathname();
@@ -95,21 +96,39 @@ export default function TourGuiado() {
     setRect(null);
   }
 
+  // Esc cierra el menú de ayuda o el recorrido guiado (accesibilidad por teclado).
+  useEffect(() => {
+    if (!menuAbierto && !activo) return undefined;
+    const alTeclear = (e) => {
+      if (e.key !== 'Escape') return;
+      if (activo) cerrar();
+      else setMenuAbierto(false);
+    };
+    document.addEventListener('keydown', alTeclear);
+    return () => document.removeEventListener('keydown', alTeclear);
+  });
+
   return (
     <>
       {!panelAbierto && (
         <button
           onClick={() => setMenuAbierto((v) => !v)}
-          className="fixed bottom-14 right-5 z-[90] bg-gradient-to-r from-accentPurple to-accentMagenta text-white text-sm font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-1.5 hover:opacity-90 transition-opacity no-print"
+          aria-label="Necesito ayuda"
+          aria-expanded={menuAbierto}
+          className="fixed bottom-14 right-4 z-[90] h-12 w-12 sm:w-auto sm:px-4 justify-center bg-surface text-text border border-border text-sm font-semibold rounded-full shadow-lg flex items-center gap-2 hover:bg-surface2 transition-colors no-print"
         >
-          ❓ Necesito ayuda
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accentMagenta shrink-0" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
+          </svg>
+          <span className="hidden sm:inline">Necesito ayuda</span>
         </button>
       )}
 
       {menuAbierto && !activo && !panelAbierto && (
         <div className="fixed inset-0 z-[91] flex items-end justify-end p-5" onClick={() => setMenuAbierto(false)}>
           <div className="bg-surface2 border border-border rounded-2xl p-4 w-80 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold mb-1">Te mostramos cómo funciona Cronograma ILCE</h3>
+            <h3 className="text-sm font-semibold mb-1">Te mostramos cómo funciona Tuesday ILCE</h3>
             <p className="text-xs text-textSec mb-3">Vamos a recorrer juntos las principales funciones de la aplicación.</p>
             <button
               className="w-full bg-gradient-to-r from-accentPurple to-accentMagenta text-white rounded-lg px-3 py-2 text-sm font-semibold mb-3"
@@ -117,7 +136,7 @@ export default function TourGuiado() {
             >
               Comenzar recorrido
             </button>
-            <p className="text-[11px] text-textMuted mb-1.5 font-semibold">O elegí una tarea puntual:</p>
+            <p className="text-[12px] text-textMuted mb-1.5 font-semibold">O elegí una tarea puntual:</p>
             <div className="flex flex-col gap-1">
               {TAREAS_AYUDA.map((t) => (
                 <button
@@ -129,6 +148,16 @@ export default function TourGuiado() {
                 </button>
               ))}
             </div>
+            <button
+              className="mt-3 w-full flex items-center justify-between text-left text-[13px] text-textSec hover:text-text border-t border-border pt-3"
+              onClick={() => {
+                setMenuAbierto(false);
+                window.dispatchEvent(new Event('ilce:novedades'));
+              }}
+            >
+              <span>Novedades de la app</span>
+              <span className="text-textMuted">v{APP_VERSION}</span>
+            </button>
           </div>
         </div>
       )}
@@ -184,7 +213,7 @@ function TourOverlay({ paso, idx, total, rect, buscando, modoTarea, onSiguiente,
         className="fixed bg-surface2 border border-border rounded-2xl p-4 shadow-2xl"
         style={tooltipStyle || { top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 320 }}
       >
-        {!esFinal && <p className="text-[11px] text-textMuted mb-1.5 font-semibold">{idx + 1} de {total}</p>}
+        {!esFinal && <p className="text-[12px] text-textMuted mb-1.5 font-semibold">{idx + 1} de {total}</p>}
         <h3 className="text-sm font-semibold mb-1.5">{paso.titulo}</h3>
         {buscando ? (
           <p className="text-xs text-textSec mb-3">Cargando…</p>
@@ -198,7 +227,7 @@ function TourOverlay({ paso, idx, total, rect, buscando, modoTarea, onSiguiente,
           <button className="text-xs text-textMuted" onClick={onSalir}>Salir</button>
           <div className="flex gap-1.5">
             {idx > 0 && !modoTarea && (
-              <button className="bg-transparent text-textSec border border-border rounded-lg px-2.5 py-1.5 text-xs" onClick={onAnterior}>← Atrás</button>
+              <button className="bg-transparent text-textSec border border-border rounded-lg px-2.5 py-1.5 text-xs" onClick={onAnterior}> Atrás</button>
             )}
             <button className="bg-gradient-to-r from-accentPurple to-accentMagenta text-white rounded-lg px-3 py-1.5 text-xs font-semibold" onClick={onSiguiente}>
               {esFinal || modoTarea ? 'Listo' : 'Siguiente →'}

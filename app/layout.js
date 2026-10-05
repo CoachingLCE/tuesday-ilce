@@ -3,6 +3,9 @@ import { SessionProvider } from '../lib/useSession';
 import { ThemeProvider } from '../lib/ThemeContext';
 import VersionBadge from '../components/VersionBadge';
 import Nav from '../components/Nav';
+import EscCierraModales from '../components/EscCierraModales';
+import TablasEnTarjetas from '../components/TablasEnTarjetas';
+import { DialogosProvider } from '../components/Dialogos';
 
 export const metadata = {
   metadataBase: new URL('https://tuesday-ilce.vercel.app'),
@@ -34,9 +37,13 @@ export default function RootLayout({ children }) {
       <body className="min-h-screen bg-bg text-text">
         <ThemeProvider>
           <SessionProvider>
-            <Nav />
-            {children}
-            <VersionBadge />
+            <DialogosProvider>
+              <EscCierraModales />
+              <TablasEnTarjetas />
+              <Nav />
+              {children}
+              <VersionBadge />
+            </DialogosProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>

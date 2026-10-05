@@ -22,7 +22,7 @@ function CampoPassword({ label, value, onChange }) {
           title={verlo ? 'Ocultar' : 'Mostrar'}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-textMuted hover:text-text text-sm"
         >
-          {verlo ? '🙈' : '👁️'}
+          {verlo ? '' : ''}
         </button>
       </div>
     </>

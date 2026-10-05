@@ -86,8 +86,8 @@ function CeldaEstado({ columna, valor, onGuardar, puedeEditarEstructura, onAgreg
         onClick={() => (abierto ? setAbierto(false) : abrir())}
         className={
           opcion
-            ? 'inline-flex items-center justify-center max-w-full h-6 px-3 rounded-full text-[11px] font-semibold text-white truncate leading-none tracking-tight hover:brightness-110 transition'
-            : 'inline-flex items-center justify-center h-6 px-3 rounded-full text-[11px] font-medium truncate leading-none tracking-tight bg-surface2 text-textMuted border border-dashed border-border hover:border-textMuted transition'
+            ? 'inline-flex items-center justify-center max-w-full h-6 px-3 rounded-full text-[12px] font-semibold text-white truncate leading-none tracking-tight hover:brightness-110 transition'
+            : 'inline-flex items-center justify-center h-6 px-3 rounded-full text-[12px] font-medium truncate leading-none tracking-tight bg-surface2 text-textMuted border border-dashed border-border hover:border-textMuted transition'
         }
         style={opcion ? { background: opcion.color } : undefined}
       >
@@ -103,7 +103,7 @@ function CeldaEstado({ columna, valor, onGuardar, puedeEditarEstructura, onAgreg
             <button
               key={o.id}
               onClick={() => { onGuardar(o.id, `cambió ${columna.nombre} a "${o.label}"`); setAbierto(false); }}
-              className="w-full text-center rounded-full px-3 py-1 text-[11px] text-white font-medium leading-none tracking-tight hover:brightness-110 transition"
+              className="w-full text-center rounded-full px-3 py-1 text-[12px] text-white font-medium leading-none tracking-tight hover:brightness-110 transition"
               style={{ background: o.color }}
             >
               {o.label}
@@ -133,10 +133,10 @@ function CeldaEstado({ columna, valor, onGuardar, puedeEditarEstructura, onAgreg
                   ))}
                 </div>
                 <div className="flex gap-1">
-                  <button type="submit" disabled={creando || !nombreNuevo.trim()} className="flex-1 bg-accentTeal text-white rounded px-2 py-1 text-[11px] font-semibold disabled:opacity-50">
+                  <button type="submit" disabled={creando || !nombreNuevo.trim()} className="flex-1 bg-accentTeal text-white rounded px-2 py-1 text-[12px] font-semibold disabled:opacity-50">
                     {creando ? 'Creando…' : 'Crear y asignar'}
                   </button>
-                  <button type="button" onClick={() => setFormularioAbierto(false)} className="text-[11px] text-textMuted px-2">Cancelar</button>
+                  <button type="button" onClick={() => setFormularioAbierto(false)} className="text-[12px] text-textMuted px-2">Cancelar</button>
                 </div>
               </form>
             ) : (
@@ -245,7 +245,7 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPer
           <div className="flex items-center gap-1 overflow-hidden">
             <div className="flex items-center -space-x-1.5 shrink-0">
               {personas.slice(0, 3).map((p) => (
-                <span key={p.email} title={p.nombre} className="w-6 h-6 rounded-full bg-accentPurple text-white flex items-center justify-center text-[10px] font-bold border-2 border-surface">
+                <span key={p.email} title={p.nombre} className="w-6 h-6 rounded-full bg-accentPurple text-white flex items-center justify-center text-[12px] font-bold border-2 border-surface">
                   {p.nombre.slice(0, 1).toUpperCase()}
                 </span>
               ))}
@@ -275,11 +275,11 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPer
                   onClick={() => alternar(u)}
                   className={`w-full text-left text-xs px-2 py-2 rounded flex items-center gap-2 mb-0.5 ${activo ? 'bg-accentTeal/15' : 'hover:bg-bg'}`}
                 >
-                  <span className="w-6 h-6 rounded-full bg-accentPurple text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-accentPurple text-white flex items-center justify-center text-[12px] font-bold shrink-0">
                     {u.nombre.slice(0, 1).toUpperCase()}
                   </span>
                   <span className="flex-1 truncate">{u.nombre}</span>
-                  {activo && <span className="text-accentTeal shrink-0">✓</span>}
+                  {activo && <span className="text-accentTeal shrink-0"></span>}
                 </button>
               );
             })}
@@ -288,13 +288,13 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPer
           {puedeCrearPersonas && busqueda.trim() && !hayCoincidenciaExacta && (
             formularioAbierto ? (
               <form onSubmit={crear} className="mt-1 border-t border-border pt-1.5 space-y-1">
-                <p className="text-[11px] text-textMuted px-1">Crear a &quot;{busqueda.trim()}&quot; en Usuarios:</p>
+                <p className="text-[12px] text-textMuted px-1">Crear a &quot;{busqueda.trim()}&quot; en Usuarios:</p>
                 <input
                   autoFocus value={emailNuevo} onChange={(e) => setEmailNuevo(e.target.value)}
                   type="email" placeholder="email@ilce.com"
                   className="w-full bg-bg border border-border rounded px-2 py-1 text-xs"
                 />
-                {errorCreando && <p className="text-[10px] text-dangerText px-1">{errorCreando}</p>}
+                {errorCreando && <p className="text-[12px] text-dangerText px-1">{errorCreando}</p>}
                 <div className="flex gap-1">
                   <button type="submit" disabled={creando || !emailNuevo.trim()} className="flex-1 bg-accentTeal text-white rounded px-2 py-1 text-xs font-semibold disabled:opacity-50">
                     {creando ? 'Creando…' : 'Crear'}
@@ -317,7 +317,7 @@ function CeldaPersona({ columna, valor, usuariosEquipo, onGuardar, puedeCrearPer
                 Quitar todos
               </button>
             ) : <span />}
-            <button onClick={() => setAbierto(false)} className="text-xs text-accentTeal font-semibold px-2 py-1">Listo ✓</button>
+            <button onClick={() => setAbierto(false)} className="text-xs text-accentTeal font-semibold px-2 py-1">Listo </button>
           </div>
         </div>,
         document.body
@@ -378,13 +378,13 @@ function CeldaFecha({ columna, valor, onGuardar }) {
 
 function iconoAdjunto(mimeType) {
   const m = mimeType || '';
-  if (m.startsWith('image/')) return '🖼️';
-  if (m.startsWith('video/')) return '🎬';
-  if (m === 'application/pdf') return '📄';
-  if (m.includes('spreadsheet') || m.includes('excel')) return '📊';
-  if (m.includes('word') || m.includes('document')) return '📝';
-  if (m.includes('presentation') || m.includes('powerpoint')) return '📽️';
-  return '📎';
+  if (m.startsWith('image/')) return '';
+  if (m.startsWith('video/')) return '';
+  if (m === 'application/pdf') return '';
+  if (m.includes('spreadsheet') || m.includes('excel')) return '';
+  if (m.includes('word') || m.includes('document')) return '';
+  if (m.includes('presentation') || m.includes('powerpoint')) return '';
+  return '';
 }
 
 const LIMITE_MB_ARCHIVO = 4;
@@ -486,11 +486,11 @@ function CeldaArchivo({ columna, valor, onGuardar }) {
     <div ref={triggerRef}>
       <button onClick={() => (abierto ? setAbierto(false) : abrir())} className="w-full h-9 rounded flex items-center gap-1 px-2 hover:bg-surface2 overflow-hidden">
         {archivos.slice(0, 3).map((a) => (
-          <span key={a.id} className="w-5 h-5 rounded bg-bg border border-border flex items-center justify-center text-[10px] shrink-0 overflow-hidden">
+          <span key={a.id} className="w-5 h-5 rounded bg-bg border border-border flex items-center justify-center text-[12px] shrink-0 overflow-hidden">
             <IconoOFoto a={a} className="w-full h-full object-cover" />
           </span>
         ))}
-        {archivos.length > 3 && <span className="text-[10px] text-textMuted">+{archivos.length - 3}</span>}
+        {archivos.length > 3 && <span className="text-[12px] text-textMuted">+{archivos.length - 3}</span>}
         {!archivos.length && <span className="text-textMuted text-xs">{subiendo ? 'Subiendo…' : '+ archivo'}</span>}
       </button>
       {abierto && posicion && typeof document !== 'undefined' && createPortal(
@@ -504,17 +504,17 @@ function CeldaArchivo({ columna, valor, onGuardar }) {
               {archivos.map((a) => (
                 <div key={a.id} className="flex items-center gap-1.5 text-xs">
                   <button onClick={() => setLightbox(a)} className="flex-1 flex items-center gap-1.5 text-left truncate hover:underline">
-                    <span className="w-5 h-5 rounded bg-bg border border-border flex items-center justify-center text-[10px] shrink-0 overflow-hidden">
+                    <span className="w-5 h-5 rounded bg-bg border border-border flex items-center justify-center text-[12px] shrink-0 overflow-hidden">
                       <IconoOFoto a={a} className="w-full h-full object-cover" />
                     </span>
                     <span className="truncate">{a.name}</span>
                   </button>
-                  <button onClick={() => quitar(a)} className="text-textMuted hover:text-dangerText shrink-0">✕</button>
+                  <button onClick={() => quitar(a)} className="text-textMuted hover:text-dangerText shrink-0"></button>
                 </div>
               ))}
             </div>
           ) : <p className="text-xs text-textMuted mb-2">Sin archivos todavía.</p>}
-          {error && <p className="text-dangerText text-[10.5px] mb-1.5">{error}</p>}
+          {error && <p className="text-dangerText text-[12px] mb-1.5">{error}</p>}
           <input ref={inputRef} type="file" multiple onChange={onElegirArchivos} className="hidden" />
           <button
             type="button" disabled={subiendo}
@@ -523,13 +523,13 @@ function CeldaArchivo({ columna, valor, onGuardar }) {
           >
             {subiendo ? 'Subiendo…' : '+ Subir archivo'}
           </button>
-          <p className="text-[10px] text-textMuted mt-1 text-center">Máximo {LIMITE_MB_ARCHIVO} MB por archivo</p>
+          <p className="text-[12px] text-textMuted mt-1 text-center">Máximo {LIMITE_MB_ARCHIVO} MB por archivo</p>
         </div>,
         document.body
       )}
       {lightbox && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-6" onClick={() => setLightbox(null)}>
-          <button onClick={() => setLightbox(null)} className="absolute top-4 right-5 text-white text-2xl leading-none">✕</button>
+          <button onClick={() => setLightbox(null)} className="absolute top-4 right-5 text-white text-2xl leading-none"></button>
           <div onClick={(e) => e.stopPropagation()} className="w-[85vw] h-[82vh] flex flex-col items-center gap-2">
             <iframe src={lightbox.previewUrl} className="w-full flex-1 rounded-lg bg-white border-0" allow="autoplay" title={lightbox.name} />
             <div className="flex items-center gap-3">

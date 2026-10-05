@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '../../lib/useSession';
+import { useDialogos } from '../../components/Dialogos';
 
 const inputCls = 'w-full bg-bg border border-border rounded-lg px-2.5 py-2 text-sm';
 const btnCls = 'bg-gradient-to-r from-accentPurple to-accentMagenta text-white rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50';
@@ -15,6 +16,7 @@ const FORM_VACIO = {
 };
 
 export default function AutomatizacionesPage() {
+  const { confirmar } = useDialogos();
   const { usuario, cargando, fetchAutenticado } = useSession();
   const router = useRouter();
   const [columnas, setColumnas] = useState([]);
@@ -92,7 +94,7 @@ export default function AutomatizacionesPage() {
   }
 
   async function eliminar(id, nombre) {
-    if (!confirm(`¿Eliminar la automatización "${nombre}"?`)) return;
+    if (!(await confirmar({ titulo: 'Eliminar automatización', mensaje: `¿Eliminar la automatización "${nombre}"?`, textoConfirmar: 'Eliminar', peligro: true }))) return;
     setError(''); setMensaje('');
     try {
       const res = await fetchAutenticado(`/api/tablero/automatizaciones/${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -117,7 +119,7 @@ export default function AutomatizacionesPage() {
 
   return (
     <div className="max-w-[900px] mx-auto px-6 pb-16 pt-10">
-      <h1 className="text-xl mb-1">⚡ Automatizaciones</h1>
+      <h1 className="text-xl mb-1"> Automatizaciones</h1>
       <p className="text-textSec text-sm mb-5">
         La app manda mails sola todos los días a las 8:00 (hora Argentina): recordatorios de vencimiento, o un resumen periódico. Se pueden armar varias reglas a la vez.
       </p>
@@ -126,7 +128,7 @@ export default function AutomatizacionesPage() {
       {mensaje && <p className="text-successText text-sm mb-3">{mensaje}</p>}
 
       <div className="bg-surface2 border border-border rounded-2xl p-5 mb-6">
-        <h2 className="text-sm font-semibold mb-3">➕ Nueva automatización</h2>
+        <h2 className="text-sm font-semibold mb-3"> Nueva automatización</h2>
         <form onSubmit={crear} className="space-y-3">
           <div className="grid grid-cols-2 gap-2.5">
             <div>
@@ -150,7 +152,7 @@ export default function AutomatizacionesPage() {
                 <option value="">— Elegir —</option>
                 {columnasFecha.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
-              {columnasFecha.length === 0 && <p className="text-textMuted text-[11px] mt-1">El tablero todavía no tiene ninguna columna de tipo Fecha.</p>}
+              {columnasFecha.length === 0 && <p className="text-textMuted text-[12px] mt-1">El tablero todavía no tiene ninguna columna de tipo Fecha.</p>}
             </div>
             <div>
               <label className="text-xs text-textSec block mb-1">
@@ -206,7 +208,7 @@ export default function AutomatizacionesPage() {
               placeholder={form.tipo === 'recordatorio_vencimiento' ? 'responsable  —  o mails separados por coma' : 'mails separados por coma'}
               value={form.destinatarios} onChange={(e) => setForm((f) => ({ ...f, destinatarios: e.target.value }))} className={inputCls} />
             {form.tipo === 'recordatorio_vencimiento' && (
-              <p className="text-textMuted text-[11px] mt-1">Escribí <b>responsable</b> para avisarle a quien esté asignado en la columna Responsable de cada contenido, o poné uno o más mails separados por coma para avisar siempre a las mismas personas.</p>
+              <p className="text-textMuted text-[12px] mt-1">Escribí <b>responsable</b> para avisarle a quien esté asignado en la columna Responsable de cada contenido, o poné uno o más mails separados por coma para avisar siempre a las mismas personas.</p>
             )}
           </div>
 
@@ -243,13 +245,13 @@ function FilaAutomatizacion({ a, columnas, onActualizar, onEliminar }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
             <span className="font-semibold text-sm">{a.nombre}</span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${a.activo ? 'bg-successBg text-successText' : 'bg-surface text-textMuted'}`}>
+            <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${a.activo ? 'bg-successBg text-successText' : 'bg-surface text-textMuted'}`}>
               {a.activo ? 'Activa' : 'Pausada'}
             </span>
           </div>
           <p className="text-textSec text-xs">{detalle}</p>
           {columnaEstado && (
-            <p className="text-textMuted text-[11px] mt-0.5">No avisa si "{columnaEstado.nombre}" está en: {(a.estadosExcluidos || []).map((id) => columnaEstado.opciones?.find((o) => o.id === id)?.label || id).join(', ') || '—'}</p>
+            <p className="text-textMuted text-[12px] mt-0.5">No avisa si "{columnaEstado.nombre}" está en: {(a.estadosExcluidos || []).map((id) => columnaEstado.opciones?.find((o) => o.id === id)?.label || id).join(', ') || '—'}</p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">

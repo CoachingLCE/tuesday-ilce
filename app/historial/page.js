@@ -14,7 +14,7 @@ const inputFechaCls = inputCls;
 // Colores distintos por persona, para reconocerla rápido en la lista sin leer el nombre —
 // el mismo nombre siempre cae en el mismo color (hash simple sobre una paleta fija).
 const PALETA_USUARIOS = [
-  { bg: 'bg-accentPurple/20', text: 'text-accentPurple' },
+  { bg: 'bg-accentPurple/20', text: 'text-accentPurpleTxt' },
   { bg: 'bg-accentTeal/20', text: 'text-accentTeal' },
   { bg: 'bg-successBg', text: 'text-successText' },
   { bg: 'bg-warningBg', text: 'text-warningText' },
@@ -122,18 +122,18 @@ export default function AuditoriaPage() {
             </div>
             <div>
               <label className="text-xs text-textSec block mb-1">Buscar</label>
-              <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="🔎 Usuario, acción o detalle…" className={`${inputCls} w-64`} />
+              <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder=" Usuario, acción o detalle…" className={`${inputCls} w-64`} />
             </div>
             <button onClick={() => exportarCSV(registrosFiltrados)} disabled={registrosFiltrados.length === 0}
               className="bg-surface2 border border-border rounded-lg px-4 py-2 text-sm disabled:opacity-40">
-              ⬇ Exportar a CSV
+               Exportar a CSV
             </button>
           </div>
 
           <div className={boxCls}>
             {errorCarga ? (
               <div className="text-center py-6">
-                <p className="text-dangerText text-sm font-semibold mb-3">⚠️ {errorCarga}</p>
+                <p className="text-dangerText text-sm font-semibold mb-3"> {errorCarga}</p>
                 <button onClick={cargar} className="text-sm px-4 py-2 rounded-lg bg-accentPurple text-white font-semibold">Reintentar</button>
               </div>
             ) : cargandoDatos ? (
@@ -165,7 +165,7 @@ export default function AuditoriaPage() {
                 </table>
               </div>
             )}
-            <p className="text-textMuted text-[11px] mt-3">Se muestran hasta 500 registros que coincidan con el filtro, del más reciente al más antiguo.</p>
+            <p className="text-textMuted text-[12px] mt-3">Se muestran hasta 500 registros que coincidan con el filtro, del más reciente al más antiguo.</p>
           </div>
         </>
       )}

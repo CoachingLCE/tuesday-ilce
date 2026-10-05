@@ -29,6 +29,13 @@ export default function VersionBadge() {
     try { localStorage.setItem(CLAVE_ULTIMA_VISTA, APP_VERSION); } catch { /* ignorar */ }
   }
 
+  // "Novedades" también se abre desde el botón de Ayuda (en celular el cartel flotante no se muestra).
+  useEffect(() => {
+    const abrirDesdeAyuda = () => abrir();
+    window.addEventListener('ilce:novedades', abrirDesdeAyuda);
+    return () => window.removeEventListener('ilce:novedades', abrirDesdeAyuda);
+  });
+
   if (pathname === '/confirmar-recepcion') return null;
 
   const hoy = new Date();
@@ -41,7 +48,7 @@ export default function VersionBadge() {
     <>
       <button
         onClick={abrir}
-        className={`fixed bottom-5 right-5 text-[11px] text-textMuted bg-surface2/90 border border-border rounded-full px-3 py-1 z-40 no-print hover:text-text hover:border-accentTeal transition-colors${hayNovedades ? ' version-badge-novedad' : ''}`}
+        className={`hidden md:block fixed bottom-3 right-4 text-[12px] text-textMuted bg-surface2 border border-border rounded-full px-3 py-1 z-40 no-print hover:text-text hover:border-accentTeal transition-colors${hayNovedades ? ' version-badge-novedad' : ''}`}
         title="Ver novedades"
       >
         v{APP_VERSION} · Actualizado {fecha}
@@ -50,8 +57,8 @@ export default function VersionBadge() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setAbierto(false)}>
           <div className="bg-surface2 border border-border rounded-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-base font-bold">📋 Novedades de la app</p>
-              <button onClick={() => setAbierto(false)} className="text-textMuted hover:text-text">✕</button>
+              <p className="text-base font-bold"> Novedades de la app</p>
+              <button onClick={() => setAbierto(false)} className="text-textMuted hover:text-text"></button>
             </div>
             <div className="space-y-5">
               {paraMostrar.map((entrada) => (
@@ -62,7 +69,7 @@ export default function VersionBadge() {
                   <ul className="space-y-1">
                     {entrada.cambios.map((c, i) => (
                       <li key={i} className="text-textSec text-xs flex gap-2">
-                        <span className="text-accentPurple">•</span>
+                        <span className="text-accentPurpleTxt">•</span>
                         <span>{c}</span>
                       </li>
                     ))}

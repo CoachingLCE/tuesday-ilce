@@ -76,7 +76,7 @@ export default function VistaCalendario({ items, grupos, columnaFecha, columnaEs
 
       <div className="grid grid-cols-7 gap-1.5 mb-1.5">
         {DIAS.map((d) => (
-          <div key={d} className="text-[11px] font-semibold text-textMuted text-center py-1">{d}</div>
+          <div key={d} className="text-[12px] font-semibold text-textMuted text-center py-1">{d}</div>
         ))}
       </div>
 
@@ -93,7 +93,7 @@ export default function VistaCalendario({ items, grupos, columnaFecha, columnaEs
                 >
                   {iso && (
                     <>
-                      <p className={`text-[10.5px] mb-1 ${esHoy ? 'text-accentTeal font-bold' : 'text-textMuted'}`}>{parseInt(iso.slice(8, 10), 10)}</p>
+                      <p className={`text-[12px] mb-1 ${esHoy ? 'text-accentTeal font-bold' : 'text-textMuted'}`}>{parseInt(iso.slice(8, 10), 10)}</p>
                       <div className="flex flex-col gap-1">
                         {itemsDelDia.slice(0, 3).map((it) => {
                           const grupo = gruposPorId.get(it.grupoId);
@@ -103,7 +103,7 @@ export default function VistaCalendario({ items, grupos, columnaFecha, columnaEs
                               key={it.id}
                               onClick={() => onAbrirItem(it.id)}
                               title={it.nombre}
-                              className="text-left text-[10.5px] leading-tight rounded px-1.5 py-1 truncate hover:opacity-80"
+                              className="text-left text-[12px] leading-tight rounded px-1.5 py-1 truncate hover:opacity-80"
                               style={{ background: estadoOpcion?.color || grupo?.color || '#808094', color: 'white' }}
                             >
                               {it.nombre}
@@ -111,7 +111,7 @@ export default function VistaCalendario({ items, grupos, columnaFecha, columnaEs
                           );
                         })}
                         {itemsDelDia.length > 3 && (
-                          <span className="text-[10px] text-textMuted px-1.5">+{itemsDelDia.length - 3} más</span>
+                          <span className="text-[12px] text-textMuted px-1.5">+{itemsDelDia.length - 3} más</span>
                         )}
                       </div>
                     </>
@@ -133,7 +133,7 @@ export default function VistaCalendario({ items, grupos, columnaFecha, columnaEs
                 <button
                   key={it.id}
                   onClick={() => onAbrirItem(it.id)}
-                  className="text-[11px] rounded-full px-2.5 py-1 border border-border bg-surface2 hover:border-accentTeal"
+                  className="text-[12px] rounded-full px-2.5 py-1 border border-border bg-surface2 hover:border-accentTeal"
                   style={{ borderLeft: `3px solid ${grupo?.color || '#808094'}` }}
                 >
                   {it.nombre}

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Celda from './Celda';
 import { marcarPanelAbierto, marcarPanelCerrado } from '../../lib/panelAbierto';
+import { useDialogos } from '../Dialogos';
 
 // Ancho del panel de detalle: el usuario puede arrastrar el borde izquierdo para agrandarlo
 // (se guarda en localStorage para que quede como lo dejó). Solo aplica en escritorio — en
@@ -21,8 +22,8 @@ const URL_REGEX = /(https?:\/\/[^\s<>"']+)/g;
 // Emojis más comunes para el picker de la Descripción — un set curado y chico (no todo el
 // set Unicode) para que el popover entre en pantalla y no haya que scrollear demasiado.
 const EMOJIS_DESCRIPCION = [
-  '😀', '😂', '😊', '😉', '😍', '🤔', '😅', '😎', '🙌', '👏', '👍', '👎', '🙏', '💪', '✅', '❌',
-  '⚠️', '🔥', '🎉', '🚀', '💡', '📌', '📅', '⏰', '❤️', '⭐', '✨', '🎯', '📈', '📉', '💬', '👀'
+  '😀', '😂', '😊', '😉', '😍', '🤔', '😅', '😎', '🙌', '👏', '👍', '👎', '🙏', '💪', '', '',
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
 ];
 
 // Convierte URLs sueltas en texto a links <a> clickeables, sin tocar lo que ya está
@@ -319,7 +320,7 @@ function DescripcionCard({
         <p className="text-xs font-semibold text-textMuted flex-1">Descripción {numero}</p>
         {bloqueada ? (
           <button type="button" onClick={activarEdicion} className="text-xs px-2.5 py-1 rounded-md border border-border text-textSec hover:text-text hover:border-accentTeal">
-            ✏️ Editar
+             Editar
           </button>
         ) : (
           <>
@@ -363,12 +364,12 @@ function DescripcionCard({
             {modificado && (
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={guardar}
                 className="ml-2 text-xs px-3 py-1 rounded-md bg-accentTeal text-white font-semibold">
-                💾 Guardar
+                 Guardar
               </button>
             )}
           </>
         )}
-        {guardadoOk && <span className="ml-2 text-xs text-successText font-semibold">✓ Guardado</span>}
+        {guardadoOk && <span className="ml-2 text-xs text-successText font-semibold"> Guardado</span>}
       </div>
       <div
         ref={bodyRef}
@@ -383,7 +384,7 @@ function DescripcionCard({
         }`}
         data-tour={numero === 1 ? 'tablero-descripcion' : undefined}
       />
-      {!bloqueada && <p className="text-[10px] text-textMuted mt-1">Usá @ para mencionar a alguien del equipo y avisarle.</p>}
+      {!bloqueada && <p className="text-[12px] text-textMuted mt-1">Usá @ para mencionar a alguien del equipo y avisarle.</p>}
       {mentionAbierto && sugeridos.length > 0 && mentionPos && typeof document !== 'undefined' && createPortal(
         <div style={{ position: 'fixed', top: mentionPos.top, left: mentionPos.left, zIndex: 100 }} className="w-52 bg-surface2 border border-border rounded-lg shadow-xl p-1">
           {sugeridos.map((u) => (
@@ -396,13 +397,13 @@ function DescripcionCard({
       )}
 
       <div className="mt-3 pt-3 border-t border-border">
-        <p className="text-[11px] font-semibold text-textMuted mb-1.5">Comentarios de esta descripción</p>
+        <p className="text-[12px] font-semibold text-textMuted mb-1.5">Comentarios de esta descripción</p>
         <div className="space-y-2 mb-2 max-h-40 overflow-y-auto">
           {comentarios.map((c) => (
             <div key={c.id} className="bg-surface border border-border rounded-lg px-2.5 py-2">
               <div className="flex items-center justify-between mb-0.5">
                 <span className="text-xs font-semibold">{c.autor}</span>
-                <span className="text-[10px] text-textMuted">{formatearFecha(c.fecha)}</span>
+                <span className="text-[12px] text-textMuted">{formatearFecha(c.fecha)}</span>
               </div>
               <p className="text-xs text-textSec" dangerouslySetInnerHTML={{ __html: c.html }} />
             </div>
@@ -451,6 +452,7 @@ export default function PanelDetalle({
   item, columnas, usuariosEquipo, grupos, fetchAutenticado, usuario,
   onCerrar, onActualizarItem, onEliminarItem, puedeCrearPersonas, onCrearPersona, onAgregarOpcion
 }) {
+  const { confirmar } = useDialogos();
   const [nombre, setNombre] = useState(item.nombre || '');
   const [comentarios, setComentarios] = useState([]);
   const [cargandoComentarios, setCargandoComentarios] = useState(true);
@@ -546,8 +548,8 @@ export default function PanelDetalle({
     onActualizarItem({ grupoId }, `movió el contenido al grupo "${g?.nombre || grupoId}"`);
   }
 
-  function eliminar() {
-    if (!window.confirm(`¿Eliminar "${item.nombre || 'este contenido'}"? Esta acción no se puede deshacer.`)) return;
+  async function eliminar() {
+    if (!(await confirmar({ titulo: 'Eliminar contenido', mensaje: `¿Eliminar "${item.nombre || 'este contenido'}"?\n\nEsta acción no se puede deshacer.`, textoConfirmar: 'Eliminar', peligro: true }))) return;
     onEliminarItem(item);
   }
 
@@ -596,8 +598,8 @@ export default function PanelDetalle({
             {grupos.map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
           </select>
           <div className="flex-1" />
-          <button onClick={eliminar} className="text-textMuted hover:text-dangerText text-sm" title="Eliminar">🗑</button>
-          <button onClick={onCerrar} className="text-textMuted hover:text-text text-lg leading-none" title="Cerrar">✕</button>
+          <button onClick={eliminar} className="text-textMuted hover:text-dangerText text-sm" title="Eliminar"></button>
+          <button onClick={onCerrar} className="text-textMuted hover:text-text text-lg leading-none" title="Cerrar"></button>
         </div>
 
         <div className="p-5">
@@ -613,7 +615,7 @@ export default function PanelDetalle({
           <div className="flex flex-wrap gap-3 mb-5">
             {columnas.map((c) => (
               <div key={c.id} className="w-40">
-                <p className="text-[11px] text-textMuted mb-1">{c.nombre}</p>
+                <p className="text-[12px] text-textMuted mb-1">{c.nombre}</p>
                 <Celda
                   columna={c} valor={item.cells?.[c.id]} usuariosEquipo={usuariosEquipo}
                   onGuardar={(v, txt) => actualizarCelda(c, v, txt)}
