@@ -319,7 +319,7 @@ function DescripcionCard({
       <div className="flex items-center gap-1 mb-1.5">
         <p className="text-xs font-semibold text-textMuted flex-1">Descripción {numero}</p>
         {bloqueada ? (
-          <button type="button" onClick={activarEdicion} className="text-xs px-2.5 py-1 rounded-md border border-border text-textSec hover:text-text hover:border-accentTeal">
+          <button type="button" onClick={activarEdicion} className="boton boton-chico border border-border text-textSec hover:text-text hover:border-accentTeal">
              Editar
           </button>
         ) : (
@@ -432,7 +432,7 @@ function DescripcionCard({
             document.body
           )}
           <div className="flex justify-end mt-1.5">
-            <button type="submit" disabled={enviandoComentario || !nuevoComentario.trim()} className="bg-gradient-to-r from-accentPurple to-accentMagenta text-white rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-40">
+            <button type="submit" disabled={enviandoComentario || !nuevoComentario.trim()} className="boton boton-chico boton-solido bg-gradient-to-r from-accentPurple to-accentMagenta text-white disabled:opacity-40">
               {enviandoComentario ? 'Enviando…' : 'Comentar'}
             </button>
           </div>
@@ -440,7 +440,7 @@ function DescripcionCard({
       </div>
 
       {esUltima && bloqueada && (
-        <button type="button" onClick={onAgregarDescripcion} className="mt-3 text-xs px-3 py-1.5 rounded-lg border border-dashed border-border text-textSec hover:text-text hover:border-accentTeal w-full">
+        <button type="button" onClick={onAgregarDescripcion} className="boton boton-chico mt-3 border border-dashed border-border text-textSec hover:text-text hover:border-accentTeal w-full">
           ＋ Agregar otra descripción
         </button>
       )}

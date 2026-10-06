@@ -72,7 +72,7 @@ export default function EditorColumnas({ columnas, onCrear, onActualizar, onElim
           >
             {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
           </select>
-          <button className="bg-gradient-to-r from-accentPurple to-accentMagenta text-white rounded-lg px-4 py-2 text-sm font-semibold">+ Agregar</button>
+          <button className="boton boton-solido bg-gradient-to-r from-accentPurple to-accentMagenta text-white">+ Agregar</button>
         </form>
       </div>
     </div>
