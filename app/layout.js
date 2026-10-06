@@ -20,15 +20,19 @@ export const metadata = {
     apple: '/apple-touch-icon.png?v=2'
   },
   openGraph: {
+    type: 'website',
+    locale: 'es_AR',
+    siteName: 'Instituto ILCE',
     title: 'Tuesday ILCE',
     description: 'Tablero de contenidos del equipo ILCE',
-    images: ['/og-image.png']
+    url: '/',
+    images: [{ url: '/og-image.png?v=1', width: 1200, height: 630, alt: 'Tuesday ILCE — Instituto ILCE' }]
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Tuesday ILCE',
     description: 'Tablero de contenidos del equipo ILCE',
-    images: ['/og-image.png']
+    images: ['/og-image.png?v=1']
   }
 };
 
