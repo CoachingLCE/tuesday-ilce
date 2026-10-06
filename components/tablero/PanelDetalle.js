@@ -408,7 +408,7 @@ function DescripcionCard({
               <p className="text-xs text-textSec" dangerouslySetInnerHTML={{ __html: c.html }} />
             </div>
           ))}
-          {!comentarios.length && <p className="text-xs text-textMuted">Todavía no hay comentarios acá.</p>}
+          {!comentarios.length && <p className="vacio vacio-chico">Todavía no hay comentarios acá.</p>}
         </div>
         <form onSubmit={enviarComentario} className="relative">
           <textarea
@@ -659,7 +659,7 @@ export default function PanelDetalle({
                       <span className="font-semibold">{a.autor}</span> {a.texto} <span className="text-textMuted">· {formatearFecha(a.fecha)}</span>
                     </p>
                   ))
-                ) : <p className="text-xs text-textMuted">Sin actividad registrada.</p>}
+                ) : <p className="vacio vacio-chico">Sin actividad registrada.</p>}
               </div>
             )}
           </div>

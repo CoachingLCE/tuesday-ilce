@@ -848,7 +848,7 @@ export default function TableroPage() {
           ))}
 
           {!grupos.length && (
-            <p className="text-sm text-textMuted mb-4">Todavía no hay grupos. Creá el primero abajo.</p>
+            <p className="vacio mb-4">Todavía no hay grupos. Creá el primero abajo.</p>
           )}
 
           <form onSubmit={crearGrupoDesdeInput} className="flex items-center gap-2" data-tour="tablero-nuevo-grupo">

@@ -220,7 +220,7 @@ export default function AutomatizacionesPage() {
       {cargandoLista ? (
         <p className="text-textSec text-sm">Cargando…</p>
       ) : automatizaciones.length === 0 ? (
-        <p className="text-textMuted text-sm">Todavía no hay ninguna automatización creada.</p>
+        <p className="vacio">Todavía no hay ninguna automatización creada.</p>
       ) : (
         <div className="flex flex-col gap-2.5">
           {automatizaciones.map((a) => (
