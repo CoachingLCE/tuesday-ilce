@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from '../../lib/useSession';
 import { tienePermisoAuditoria } from '../../lib/permisos';
 import AccesoDenegado from '../../components/AccesoDenegado';
+import { etiquetaMes, siguienteMes } from '../../lib/historialMeses';
 
 const boxCls = 'bg-surface2 border border-border rounded-2xl p-5 mb-4';
 const inputCls = 'bg-bg border border-border rounded-lg px-2.5 py-2 text-sm';
@@ -57,6 +58,14 @@ export default function AuditoriaPage() {
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  // Historial mes a mes: se carga el mes actual y "Ver más" abre el anterior. Con filtros o una búsqueda se mira TODO (de cualquier mes).
+  const [meses, setMeses] = useState([]);                 // [{ mes: '2026-10', n: 120 }] meses con movimientos
+  const [mesesCargados, setMesesCargados] = useState([]);
+  const [cargandoMas, setCargandoMas] = useState(false);
+  const [usuariosLista, setUsuariosLista] = useState([]);
+  const [totalServidor, setTotalServidor] = useState(0);
+  const [truncado, setTruncado] = useState(false);
+  const modoTodo = !!(filtroUsuario || desde || hasta || busqueda.trim());
 
   const puedeVer = tienePermisoAuditoria(usuario);
 
@@ -65,7 +74,7 @@ export default function AuditoriaPage() {
   useEffect(() => {
     if (!usuario || !puedeVer) return;
     cargar();
-  }, [usuario, filtroUsuario, desde, hasta]);
+  }, [usuario, filtroUsuario, desde, hasta, modoTodo]);
 
   async function cargar() {
     setCargandoDatos(true);
@@ -74,11 +83,16 @@ export default function AuditoriaPage() {
     if (filtroUsuario) params.set('usuario', filtroUsuario);
     if (desde) params.set('desde', desde);
     if (hasta) params.set('hasta', hasta);
+    if (modoTodo) params.set('todo', '1');
     try {
       const res = await fetchAutenticado(`/api/historial?${params.toString()}`);
       const r = await res.json();
       if (!res.ok || r.error) { setErrorCarga(r.error || 'No se pudo cargar el historial.'); setRegistros([]); }
-      else setRegistros(r.historial || []);
+      else {
+        setRegistros(r.historial || []);
+        setMeses(r.meses || []); setMesesCargados(r.mes ? [r.mes] : []);
+        setUsuariosLista(r.usuarios || []); setTotalServidor(r.total || 0); setTruncado(!!r.truncado);
+      }
     } catch {
       setErrorCarga('No se pudo conectar con el servidor.');
       setRegistros([]);
@@ -86,7 +100,22 @@ export default function AuditoriaPage() {
     setCargandoDatos(false);
   }
 
-  const usuariosUnicos = useMemo(() => [...new Set(registros.map((r) => r.usuario).filter(Boolean))].sort(), [registros]);
+  async function verMas() {
+    const sig = siguienteMes(meses, mesesCargados);
+    if (!sig || cargandoMas) return;
+    setCargandoMas(true);
+    try {
+      const res = await fetchAutenticado(`/api/historial?mes=${encodeURIComponent(sig.mes)}`);
+      const r = await res.json();
+      if (res.ok && !r.error) {
+        setRegistros((prev) => [...prev, ...(r.historial || [])]);
+        setMesesCargados((prev) => [...prev, sig.mes]);
+      } else setErrorCarga(r.error || 'No se pudo cargar el mes anterior.');
+    } catch { setErrorCarga('No se pudo conectar con el servidor.'); }
+    setCargandoMas(false);
+  }
+
+  const usuariosUnicos = useMemo(() => (usuariosLista.length ? usuariosLista : [...new Set(registros.map((r) => r.usuario).filter(Boolean))].sort()), [usuariosLista, registros]);
   const registrosFiltrados = useMemo(() => {
     if (!busqueda.trim()) return registros;
     const q = busqueda.trim().toLowerCase();
@@ -165,7 +194,25 @@ export default function AuditoriaPage() {
                 </table>
               </div>
             )}
-            <p className="text-textMuted text-[12px] mt-3">Se muestran hasta 500 registros que coincidan con el filtro, del más reciente al más antiguo.</p>
+            {!errorCarga && !cargandoDatos && (() => {
+              const sig = modoTodo ? null : siguienteMes(meses, mesesCargados);
+              return (
+                <div className="flex flex-col items-center gap-2 mt-5 no-print" aria-live="polite">
+                  {modoTodo ? (
+                    <p className="text-textMuted text-[12px]">Mostrando todos los meses, porque hay un filtro o una búsqueda activa.{truncado ? ` Se muestran los 2000 más recientes de ${totalServidor}: acotá por fechas para ver el resto.` : ''}</p>
+                  ) : (
+                    <>
+                      <p className="text-textMuted text-[12px]">Mostrando {mesesCargados.length ? [...mesesCargados].sort().reverse().map(etiquetaMes).join(', ') : 'el historial'}.</p>
+                      {sig ? (
+                        <button onClick={verMas} disabled={cargandoMas} className="boton bg-surface2 border border-border disabled:opacity-60">
+                          {cargandoMas ? 'Cargando…' : `Ver más · ${etiquetaMes(sig.mes)} (${sig.n})`}
+                        </button>
+                      ) : meses.length > 0 && <p className="text-textMuted text-[12px]">No hay movimientos más antiguos.</p>}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </>
       )}
