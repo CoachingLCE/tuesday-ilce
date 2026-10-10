@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '../../lib/useSession';
 import { tienePermisoAuditoria } from '../../lib/permisos';
@@ -66,6 +66,7 @@ export default function AuditoriaPage() {
   const [totalServidor, setTotalServidor] = useState(0);
   const [truncado, setTruncado] = useState(false);
   const modoTodo = !!(filtroUsuario || desde || hasta || busqueda.trim());
+  const cargaRef = useRef(0); // si se piden dos cargas seguidas (escribir y borrar rápido), solo vale la última: la lenta no pisa a la nueva
 
   const puedeVer = tienePermisoAuditoria(usuario);
 
@@ -77,6 +78,7 @@ export default function AuditoriaPage() {
   }, [usuario, filtroUsuario, desde, hasta, modoTodo]);
 
   async function cargar() {
+    const mia = ++cargaRef.current;
     setCargandoDatos(true);
     setErrorCarga('');
     const params = new URLSearchParams();
@@ -87,6 +89,7 @@ export default function AuditoriaPage() {
     try {
       const res = await fetchAutenticado(`/api/historial?${params.toString()}`);
       const r = await res.json();
+      if (mia !== cargaRef.current) return;
       if (!res.ok || r.error) { setErrorCarga(r.error || 'No se pudo cargar el historial.'); setRegistros([]); }
       else {
         setRegistros(r.historial || []);
@@ -94,19 +97,22 @@ export default function AuditoriaPage() {
         setUsuariosLista(r.usuarios || []); setTotalServidor(r.total || 0); setTruncado(!!r.truncado);
       }
     } catch {
+      if (mia !== cargaRef.current) return;
       setErrorCarga('No se pudo conectar con el servidor.');
       setRegistros([]);
     }
-    setCargandoDatos(false);
+    if (mia === cargaRef.current) setCargandoDatos(false);
   }
 
   async function verMas() {
     const sig = siguienteMes(meses, mesesCargados);
     if (!sig || cargandoMas) return;
+    const mia = cargaRef.current;
     setCargandoMas(true);
     try {
       const res = await fetchAutenticado(`/api/historial?mes=${encodeURIComponent(sig.mes)}`);
       const r = await res.json();
+      if (mia !== cargaRef.current) { setCargandoMas(false); return; } // mientras tanto cambió el filtro: este mes ya no corresponde
       if (res.ok && !r.error) {
         setRegistros((prev) => [...prev, ...(r.historial || [])]);
         setMesesCargados((prev) => [...prev, sig.mes]);
